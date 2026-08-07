@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  windows-msvc:
+    name: Windows (MSVC x64)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure
+        run: >
+          cmake -S . -B build -A x64
+          -DCOMETTEXTEL_BUILD_SHARED=ON
+          -DCOMETTEXTEL_BUILD_STATIC=ON
+          -DCOMETTEXTEL_BUILD_TESTS=ON
+          -DCOMETTEXTEL_BUILD_EXAMPLES=OFF
+          -DCOMETTEXTEL_BUILD_DOCS=OFF
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure --timeout 60
+
+      - name: Stage artifacts
+        shell: pwsh
+        run: |
+          $out = "artifact/comettextel-windows-x64"
+          New-Item -ItemType Directory -Force -Path "$out/bin", "$out/lib", "$out/include" | Out-Null
+          Copy-Item "build/Release/comettextel.dll" "$out/bin/"
+          Copy-Item "build/Release/comettextel.lib" "$out/lib/"
+          Copy-Item "build/Release/comettextel_static.lib" "$out/lib/"
+          Copy-Item -Recurse "include/comettextel" "$out/include/"
+          if (Test-Path LICENSE) { Copy-Item LICENSE "$out/" }
+          if (Test-Path README.md) { Copy-Item README.md "$out/" }
+
+      - name: Upload Windows package
+        uses: actions/upload-artifact@v4
+        with:
+          name: comettextel-windows-x64
+          path: artifact/comettextel-windows-x64
+          if-no-files-found: error
+          retention-days: 14
+
+  linux-gcc:
+    name: Linux (GCC 14)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++-14 ninja-build
+
+      - name: Configure
+        run: >
+          cmake -S . -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_CXX_COMPILER=g++-14
+          -DCOMETTEXTEL_BUILD_SHARED=ON
+          -DCOMETTEXTEL_BUILD_STATIC=ON
+          -DCOMETTEXTEL_BUILD_TESTS=ON
+          -DCOMETTEXTEL_BUILD_EXAMPLES=OFF
+          -DCOMETTEXTEL_BUILD_DOCS=OFF
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure --timeout 60
+
+      - name: Stage artifacts
+        run: |
+          set -euo pipefail
+          out=artifact/comettextel-linux-x64
+          mkdir -p "$out/lib" "$out/include"
+          find build -maxdepth 3 -type f \( -name 'libcomettextel.so*' -o -name 'libcomettextel.a' \) -exec cp -a {} "$out/lib/" \;
+          test -n "$(find "$out/lib" -type f | head -n 1)"
+          cp -a include/comettextel "$out/include/"
+          [ -f LICENSE ] && cp LICENSE "$out/"
+          [ -f README.md ] && cp README.md "$out/"
+          ls -la "$out/lib"
+
+      - name: Upload Linux package
+        uses: actions/upload-artifact@v4
+        with:
+          name: comettextel-linux-x64
+          path: artifact/comettextel-linux-x64
+          if-no-files-found: error
+          retention-days: 14

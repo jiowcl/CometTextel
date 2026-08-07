@@ -7,6 +7,7 @@
 ![GitHub](https://img.shields.io/badge/license-MIT-green.svg)
 ![C++](https://img.shields.io/badge/language-C%2B%2B23-blue.svg)
 ![CMake](https://img.shields.io/badge/build-CMake-brightgreen.svg)
+![CI](https://github.com/jiowcl/CometTextel/actions/workflows/ci.yml/badge.svg)
 ![Status](https://img.shields.io/badge/Status-Active-success)
 
 ## Features  
@@ -56,6 +57,17 @@ Run unit tests:
 cmake --build build --config Release
 ctest --test-dir build -C Release --output-on-failure
 ```
+
+## Continuous Integration  
+
+GitHub Actions (`.github/workflows/ci.yml`) runs on every push and pull request to `main`:  
+
+- **Windows (MSVC x64)**: configure, build, run CTest, upload `comettextel-windows-x64`  
+  (`bin/comettextel.dll`, import/static libs, headers)  
+- **Linux (GCC 14)**: configure, build, run CTest, upload `comettextel-linux-x64`  
+  (`libcomettextel.so*`, `libcomettextel.a`, headers)  
+
+Download build packages from the workflow **Artifacts** tab (retained 14 days).  
 
 ## Example  
 
