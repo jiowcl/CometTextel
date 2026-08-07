@@ -102,7 +102,7 @@ comettextel/
 
 ## History  
 
-- 2014: Original Win32 COMM / GSM PDU code written as a Visual C++ project (`C++/`).  
+- 2014: Original Win32 COMM / GSM PDU code written as a Visual C++ project.  
 - 2026: Rewritten as a modern C++23 CMake library with cross-platform serial support and renamed to **CometTextel**.  
 
 ## Credits  
