@@ -14,6 +14,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 option(COMETTEXTEL_BUILD_SHARED "Build the shared library (DLL / .so / .dylib)" ON)
 option(COMETTEXTEL_BUILD_STATIC "Build the static library" ON)
 option(COMETTEXTEL_BUILD_EXAMPLES "Build example programs" ON)
+option(COMETTEXTEL_BUILD_TESTS "Build unit tests" ON)
 option(COMETTEXTEL_BUILD_DOCS "Build Doxygen documentation" OFF)
 
 if(NOT COMETTEXTEL_BUILD_SHARED AND NOT COMETTEXTEL_BUILD_STATIC)
@@ -104,6 +105,11 @@ endif()
 
 if(COMETTEXTEL_BUILD_EXAMPLES)
     add_subdirectory(examples)
+endif()
+
+if(COMETTEXTEL_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
 endif()
 
 if(COMETTEXTEL_BUILD_DOCS)

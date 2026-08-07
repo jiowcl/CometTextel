@@ -83,7 +83,10 @@ public:
     [[nodiscard]] static std::error_code encode(const Message& message, std::string& pdu_hex);
 
     /**
-     * @brief Decodes a deliver-PDU hex string into @ref Message fields.
+     * @brief Decodes a PDU hex string into @ref Message fields.
+     *
+     * Supports SMS-DELIVER (receive) and SMS-SUBMIT (as produced by @ref encode)
+     * based on the TP-MTI bits in the first TPDU octet.
      */
     [[nodiscard]] static std::error_code decode(std::string_view pdu_hex, Message& message);
 };

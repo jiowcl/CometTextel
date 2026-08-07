@@ -41,6 +41,7 @@ Optional flags:
 | `COMETTEXTEL_BUILD_SHARED` | `ON` | Build the shared library |
 | `COMETTEXTEL_BUILD_STATIC` | `ON` | Build the static library |
 | `COMETTEXTEL_BUILD_EXAMPLES` | `ON` | Build example programs |
+| `COMETTEXTEL_BUILD_TESTS` | `ON` | Build unit tests |
 | `COMETTEXTEL_BUILD_DOCS` | `OFF` | Generate Doxygen docs |
 
 Artifacts (Release):  
@@ -48,6 +49,13 @@ Artifacts (Release):
 - Windows: `build/Release/comettextel.dll`, `build/Release/comettextel_static.lib`  
 - Unix: `libcomettextel.so` / `libcomettextel.a`  
 - Example: `build/examples/Release/comettextel_send_example.exe`  
+
+Run unit tests:  
+
+```bash
+cmake --build build --config Release
+ctest --test-dir build -C Release --output-on-failure
+```
 
 ## Example  
 
@@ -97,6 +105,7 @@ comettextel/
 ├── include/comettextel/   # Public headers
 ├── src/                   # Library sources
 │   └── serial/            # Win32 / POSIX backends
+├── tests/                 # Unit tests (CTest)
 └── CMakeLists.txt
 ```
 
@@ -116,7 +125,6 @@ Code released under the MIT license.
 
 ## TODO  
 
-- Unit tests for PDU round-trip encode/decode  
 - Longer modem response handling / async I/O  
 - More examples (list / delete / receive)  
 - Package config (`comettextelConfig.cmake`) for `find_package`  

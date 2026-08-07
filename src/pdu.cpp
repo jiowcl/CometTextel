@@ -211,7 +211,7 @@ std::vector<std::uint8_t> PduCodec::encode_7bit(std::string_view text)
 
     for (std::size_t n_src = 0; n_src < text.size(); ++n_src) {
         const int n_char = static_cast<int>(n_src & 7);
-        const auto value = static_cast<std::uint8_t>(text[n_src]);
+        const auto value = static_cast<std::uint8_t>(text[n_src] & 0x7F);
 
         if (n_char == 0) {
             left = value;
@@ -219,6 +219,11 @@ std::vector<std::uint8_t> PduCodec::encode_7bit(std::string_view text)
             out.push_back(static_cast<std::uint8_t>((value << (8 - n_char)) | left));
             left = static_cast<std::uint8_t>(value >> n_char);
         }
+    }
+
+    // Incomplete septet groups still need the residual bits flushed.
+    if (!text.empty() && (text.size() & 7U) != 0U) {
+        out.push_back(left);
     }
 
     return out;
@@ -516,11 +521,6 @@ std::error_code PduCodec::decode(std::string_view pdu_hex, Message& message)
             return make_error_code(Errc::DecodeFailure);
         }
 
-        // Skip type-of-address, decode semi-octets.
-        if (smsc_len < 1) {
-            return make_error_code(Errc::DecodeFailure);
-        }
-
         const std::size_t digit_octets = static_cast<std::size_t>(smsc_len) - 1;
         ++offset; // TOA
 
@@ -529,7 +529,6 @@ std::error_code PduCodec::decode(std::string_view pdu_hex, Message& message)
         }
 
         const auto hex = bytes_to_hex(std::span<const std::uint8_t>{bytes.data() + offset, digit_octets});
-
         message.service_center = serialize_digits(hex);
         offset += digit_octets;
     }
@@ -538,7 +537,18 @@ std::error_code PduCodec::decode(std::string_view pdu_hex, Message& message)
         return make_error_code(Errc::DecodeFailure);
     }
 
-    ++offset; // first octet (TP-MTI etc.)
+    const std::uint8_t first_octet = bytes[offset++];
+    const std::uint8_t mti = static_cast<std::uint8_t>(first_octet & 0x03U);
+    const std::uint8_t vpf = static_cast<std::uint8_t>((first_octet >> 3) & 0x03U);
+    const bool is_submit = (mti == 0x01U);
+
+    if (is_submit) {
+        // SMS-SUBMIT carries TP-MR before the destination address.
+        if (offset >= bytes.size()) {
+            return make_error_code(Errc::DecodeFailure);
+        }
+        ++offset; // TP-MR
+    }
 
     if (offset >= bytes.size()) {
         return make_error_code(Errc::DecodeFailure);
@@ -552,7 +562,7 @@ std::error_code PduCodec::decode(std::string_view pdu_hex, Message& message)
 
     ++offset; // TOA
 
-    std::size_t addr_octets = (addr_len_digits + 1) / 2;
+    const std::size_t addr_octets = (static_cast<std::size_t>(addr_len_digits) + 1U) / 2U;
 
     if (offset + addr_octets > bytes.size()) {
         return make_error_code(Errc::DecodeFailure);
@@ -561,7 +571,6 @@ std::error_code PduCodec::decode(std::string_view pdu_hex, Message& message)
         const auto hex = bytes_to_hex(std::span<const std::uint8_t>{bytes.data() + offset, addr_octets});
         message.peer_address = serialize_digits(hex);
 
-        // Truncate to the reported digit count (drop padding nibble).
         if (message.peer_address.size() > addr_len_digits) {
             message.peer_address.resize(addr_len_digits);
         }
@@ -575,12 +584,33 @@ std::error_code PduCodec::decode(std::string_view pdu_hex, Message& message)
     message.protocol_id = bytes[offset++];
     message.coding = static_cast<DataCoding>(bytes[offset++]);
 
-    if (offset + 7 > bytes.size()) {
-        return make_error_code(Errc::DecodeFailure);
-    }
-    {
-        const auto ts_hex = bytes_to_hex(std::span<const std::uint8_t>{bytes.data() + offset, 7});
+    if (is_submit) {
+        // Skip TP-VP according to TP-VPF.
+        std::size_t vp_len = 0;
+        switch (vpf) {
+        case 0x01: // enhanced
+        case 0x03: // absolute
+            vp_len = 7;
+            break;
+        case 0x02: // relative
+            vp_len = 1;
+            break;
+        default:
+            vp_len = 0;
+            break;
+        }
 
+        if (offset + vp_len > bytes.size()) {
+            return make_error_code(Errc::DecodeFailure);
+        }
+        offset += vp_len;
+    } else {
+        // SMS-DELIVER: TP-SCTS is always 7 octets.
+        if (offset + 7 > bytes.size()) {
+            return make_error_code(Errc::DecodeFailure);
+        }
+
+        const auto ts_hex = bytes_to_hex(std::span<const std::uint8_t>{bytes.data() + offset, 7});
         message.service_timestamp = serialize_digits(ts_hex);
         offset += 7;
     }
@@ -594,14 +624,13 @@ std::error_code PduCodec::decode(std::string_view pdu_hex, Message& message)
 
     switch (message.coding) {
     case DataCoding::Gsm7Bit: {
-        const std::size_t packed_len = (static_cast<std::size_t>(udl) * 7 + 7) / 8;
+        const std::size_t packed_len = (static_cast<std::size_t>(udl) * 7U + 7U) / 8U;
 
         if (ud.size() < packed_len) {
             return make_error_code(Errc::DecodeFailure);
         }
 
         message.user_data = decode_7bit(ud.first(packed_len), udl);
-
         break;
     }
     case DataCoding::Ucs2: {
@@ -612,7 +641,6 @@ std::error_code PduCodec::decode(std::string_view pdu_hex, Message& message)
         if (const auto ec = decode_ucs2(ud.first(udl), message.user_data); ec) {
             return ec;
         }
-
         break;
     }
     case DataCoding::EightBit:
@@ -622,7 +650,6 @@ std::error_code PduCodec::decode(std::string_view pdu_hex, Message& message)
         }
 
         message.user_data.assign(reinterpret_cast<const char*>(ud.data()), udl);
-
         break;
     }
     }
