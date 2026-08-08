@@ -23,7 +23,8 @@
 
 ## Limitations  
 
-- **Single-segment SMS only** — concatenated SMS / UDH is not supported (no UDHI, no segment split/reassembly).  
+- **Single-segment SMS only** — concatenated SMS is not reassembled / split for send.  
+- **UDH on receive**: when TP-UDHI is set, the header is **skipped** so `user_data` is payload text only (`Message::has_udh == true`); segments are still not joined.  
 - **Per-segment payload caps** (encode rejects longer input with `EncodeFailure`):  
   - GSM 7-bit: ≤ **160** septets  
   - 8-bit / UCS-2: ≤ **140** octets  
@@ -205,8 +206,8 @@ Code released under the MIT license.
 
 ## TODO  
 
-- Longer modem response handling / async I/O  
-- Concatenated SMS / UDH (multi-part encode & decode)  
+- Concatenated SMS / UDH (multi-part encode & reassembly)  
+- Longer modem async I/O / thread-safe serial  
 
 ## Donation  
 

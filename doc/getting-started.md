@@ -177,7 +177,8 @@ Requires a GSM modem that speaks AT commands in **PDU mode**.
 
 ## Limitations  
 
-- **Single-segment only** — no concatenated SMS / UDH (encode never sets UDHI; decode does not strip or reassemble UDH).  
+- **Single-segment only** for send — encode does not create UDH / multi-part PDUs.  
+- **Receive with UDH**: header octets are skipped (`has_udh`); concat parts are not joined.  
 - Keep payloads within one segment:  
   - GSM 7-bit ≤ 160 characters (septets)  
   - 8-bit / UCS-2 ≤ 140 bytes  

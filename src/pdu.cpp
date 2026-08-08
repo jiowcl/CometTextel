@@ -46,6 +46,7 @@ namespace {
 {
     std::string digits;
     digits.reserve(address.size());
+
     for (char ch : address) {
         if (ch == '+') {
             continue;
@@ -90,6 +91,7 @@ namespace {
 
         return true;
     }
+
     if ((c0 & 0xF0) == 0xE0) {
         if (index + 1 >= text.size()) {
             return false;
@@ -103,6 +105,7 @@ namespace {
 
         return true;
     }
+
     if ((c0 & 0xF8) == 0xF0) {
         if (index + 2 >= text.size()) {
             return false;
@@ -314,6 +317,7 @@ std::error_code PduCodec::encode_ucs2(std::string_view utf8, std::vector<std::ui
 std::error_code PduCodec::decode_ucs2(std::span<const std::uint8_t> bytes, std::string& out)
 {
     out.clear();
+
     if (bytes.size() % 2 != 0) {
         return make_error_code(Errc::DecodeFailure);
     }
@@ -450,6 +454,7 @@ std::error_code PduCodec::encode(const Message& message, std::string& pdu_hex)
     buf.push_back(0x00); // TP-VP relative = 5 minutes
 
     std::vector<std::uint8_t> payload;
+
     switch (message.coding) {
     case DataCoding::Gsm7Bit: {
         // Single-segment limit without UDH: 160 septets (GSM 03.40).
@@ -625,7 +630,23 @@ std::error_code PduCodec::decode(std::string_view pdu_hex, Message& message)
     }
 
     const std::uint8_t udl = bytes[offset++];
-    const auto ud = std::span<const std::uint8_t>{bytes.data() + offset, bytes.size() - offset};
+    auto ud = std::span<const std::uint8_t>{bytes.data() + offset, bytes.size() - offset};
+
+    const bool udhi = (first_octet & 0x40U) != 0U;
+    message.has_udh = udhi;
+
+    std::size_t udh_octets = 0;
+    if (udhi) {
+        if (ud.empty()) {
+            return make_error_code(Errc::DecodeFailure);
+        }
+
+        udh_octets = static_cast<std::size_t>(ud[0]) + 1U; // UDHL + header body
+
+        if (ud.size() < udh_octets) {
+            return make_error_code(Errc::DecodeFailure);
+        }
+    }
 
     switch (message.coding) {
     case DataCoding::Gsm7Bit: {
@@ -635,26 +656,46 @@ std::error_code PduCodec::decode(std::string_view pdu_hex, Message& message)
             return make_error_code(Errc::DecodeFailure);
         }
 
-        message.user_data = decode_7bit(ud.first(packed_len), udl);
-        break;
-    }
-    case DataCoding::Ucs2: {
-        if (ud.size() < udl) {
+        // UDH occupies whole octets; fill bits align the first user septet.
+        const std::size_t skip_septets =
+            udhi ? ((udh_octets * 8U) + 6U) / 7U : 0U;
+        if (skip_septets > udl) {
             return make_error_code(Errc::DecodeFailure);
         }
 
-        if (const auto ec = decode_ucs2(ud.first(udl), message.user_data); ec) {
+        auto decoded = decode_7bit(ud.first(packed_len), udl);
+        if (skip_septets > 0) {
+            if (decoded.size() < skip_septets) {
+                return make_error_code(Errc::DecodeFailure);
+            }
+            decoded.erase(0, skip_septets);
+        }
+        message.user_data = std::move(decoded);
+
+        break;
+    }
+    case DataCoding::Ucs2: {
+        if (static_cast<std::size_t>(udl) < udh_octets || ud.size() < udl) {
+            return make_error_code(Errc::DecodeFailure);
+        }
+
+        const auto payload = ud.subspan(udh_octets, static_cast<std::size_t>(udl) - udh_octets);
+
+        if (const auto ec = decode_ucs2(payload, message.user_data); ec) {
             return ec;
         }
+
         break;
     }
     case DataCoding::EightBit:
     default: {
-        if (ud.size() < udl) {
+        if (static_cast<std::size_t>(udl) < udh_octets || ud.size() < udl) {
             return make_error_code(Errc::DecodeFailure);
         }
 
-        message.user_data.assign(reinterpret_cast<const char*>(ud.data()), udl);
+        const auto payload = ud.subspan(udh_octets, static_cast<std::size_t>(udl) - udh_octets);
+        message.user_data.assign(reinterpret_cast<const char*>(payload.data()), payload.size());
+        
         break;
     }
     }

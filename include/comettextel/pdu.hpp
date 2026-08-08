@@ -91,8 +91,9 @@ public:
      * Supports SMS-DELIVER (receive) and SMS-SUBMIT (as produced by @ref encode)
      * based on the TP-MTI bits in the first TPDU octet.
      *
-     * @note User-Data Header (UDH) is not interpreted; concatenated segments
-     *       are not reassembled.
+     * @note User-Data Header (UDH): when TP-UDHI is set, the header octets are
+     *       skipped so @ref Message::user_data contains the payload text only.
+     *       Concatenated segments are still not reassembled.
      */
     [[nodiscard]] static std::error_code decode(std::string_view pdu_hex, Message& message);
 };

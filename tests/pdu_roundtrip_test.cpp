@@ -14,6 +14,7 @@
 #include <string_view>
 #include <vector>
 
+#include "comettextel/modem.hpp"
 #include "comettextel/pdu.hpp"
 
 namespace {
@@ -269,12 +270,56 @@ void test_encode_rejects_overlong_payload()
     {
         comettextel::Message message = base;
         message.coding = comettextel::DataCoding::Ucs2;
-        // 71 BMP characters => 142 UCS-2 octets (> 140).
         message.user_data.assign(71, 'B');
         std::string pdu_hex;
         const auto ec = comettextel::PduCodec::encode(message, pdu_hex);
         CHECK(ec == comettextel::make_error_code(comettextel::Errc::EncodeFailure));
     }
+}
+
+void test_classify_response()
+{
+    using comettextel::GsmModem;
+    using comettextel::ModemResponse;
+
+    CHECK(GsmModem::classify_response("") == ModemResponse::Wait);
+    CHECK(GsmModem::classify_response("\r\nOK\r\n") == ModemResponse::Ok);
+    CHECK(GsmModem::classify_response("+CMGL: 1\r\n00...\r\n\r\nOK\r\n") == ModemResponse::Ok);
+    CHECK(GsmModem::classify_response("OK\r\n") == ModemResponse::Ok);
+    CHECK(GsmModem::classify_response("\r\nERROR\r\n") == ModemResponse::Error);
+    CHECK(GsmModem::classify_response("+CMS ERROR: 500\r\n") == ModemResponse::Error);
+    CHECK(GsmModem::classify_response("+CME ERROR: 3\r\n") == ModemResponse::Error);
+    CHECK(GsmModem::classify_response("partial") == ModemResponse::Wait);
+}
+
+void test_decode_skips_udh_ucs2()
+{
+    // SMS-DELIVER, UDHI set, UCS-2 payload "Hi" after a 6-octet concat UDH.
+    constexpr std::string_view kPdu =
+        "0044049121430008000000000000000A"
+        "050003AA0201"
+        "00480069";
+
+    comettextel::Message message;
+    CHECK(!comettextel::PduCodec::decode(kPdu, message));
+    CHECK(message.has_udh);
+    CHECK(message.coding == comettextel::DataCoding::Ucs2);
+    CHECK(message.user_data == "Hi");
+}
+
+void test_decode_skips_udh_eightbit()
+{
+    // Same framing as above, 8-bit DCS, payload "Hi".
+    constexpr std::string_view kPdu =
+        "00440491214300040000000000000008"
+        "050003AA0201"
+        "4869";
+
+    comettextel::Message message;
+    CHECK(!comettextel::PduCodec::decode(kPdu, message));
+    CHECK(message.has_udh);
+    CHECK(message.coding == comettextel::DataCoding::EightBit);
+    CHECK(message.user_data == "Hi");
 }
 
 } // namespace
@@ -293,6 +338,9 @@ int main()
     test_pdu_deliver_path();
     test_encode_rejects_empty_destination();
     test_encode_rejects_overlong_payload();
+    test_classify_response();
+    test_decode_skips_udh_ucs2();
+    test_decode_skips_udh_eightbit();
 
     if (g_failures != 0) {
         std::cerr << g_failures << " check(s) failed\n";

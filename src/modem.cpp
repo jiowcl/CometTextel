@@ -8,16 +8,42 @@
  */
 
 #include "comettextel/modem.hpp"
-
 #include "comettextel/pdu.hpp"
 
 #include <cstdio>
 #include <cstring>
+#include <thread>
 
 namespace comettextel {
+namespace {
 
 /**
- * @brief Construct a new GsmModem object.
+ * @brief Checks if a string ends with a given suffix.
+ * @param text The string to check.
+ * @param suffix The suffix to check for.
+ * @return True if the string ends with the suffix, false otherwise.
+ */
+[[nodiscard]] bool ends_with(std::string_view text, std::string_view suffix)
+{
+    return text.size() >= suffix.size() &&
+           text.compare(text.size() - suffix.size(), suffix.size(), suffix) == 0;
+}
+
+/**
+ * @brief Checks if a string contains a given token.
+ * @param text The string to check.
+ * @param token The token to check for.
+ * @return True if the string contains the token, false otherwise.
+ */
+[[nodiscard]] bool contains_token(std::string_view text, std::string_view token)
+{
+    return text.find(token) != std::string_view::npos;
+}
+
+} // namespace
+
+/**
+ * @brief Constructs a GsmModem that owns an internal serial port.
  */
 GsmModem::GsmModem()
     : port_(&owned_port_)
@@ -26,7 +52,7 @@ GsmModem::GsmModem()
 }
 
 /**
- * @brief Construct a new GsmModem object.
+ * @brief Constructs a GsmModem that owns an existing serial port.
  * @param port The serial port to use.
  */
 GsmModem::GsmModem(SerialPort& port)
@@ -36,10 +62,10 @@ GsmModem::GsmModem(SerialPort& port)
 }
 
 /**
- * @brief Open the modem and initialize it.
+ * @brief Opens the serial port and initializes the modem.
  * @param device The device to open.
- * @param config The serial configuration.
- * @return The error code.
+ * @param config The serial configuration to use.
+ * @return An error code if the operation failed.
  */
 std::error_code GsmModem::open_and_init(std::string_view device, const SerialConfig& config)
 {
@@ -51,8 +77,8 @@ std::error_code GsmModem::open_and_init(std::string_view device, const SerialCon
 }
 
 /**
- * @brief Initialize the modem.
- * @return The error code.
+ * @brief Initializes the modem.
+ * @return An error code if the operation failed.
  */
 std::error_code GsmModem::initialize()
 {
@@ -60,25 +86,24 @@ std::error_code GsmModem::initialize()
         return make_error_code(Errc::NotOpen);
     }
 
-    std::string answer;
+    ResponseBuffer buffer;
 
     if (auto ec = write_string("AT\r"); ec) {
         return ec;
     }
 
-    if (auto ec = read_string(128, answer); ec) {
+    buffer.data.clear();
+    if (auto ec = wait_until_ok(buffer, std::chrono::seconds(3)); ec) {
         return ec;
-    }
-
-    if (answer.find("OK") == std::string::npos) {
-        return make_error_code(Errc::ModemRejected);
     }
 
     if (auto ec = write_string("ATE0\r"); ec) {
         return ec;
     }
 
-    if (auto ec = read_string(128, answer); ec) {
+    buffer.data.clear();
+
+    if (auto ec = wait_until_ok(buffer, std::chrono::seconds(3)); ec) {
         return ec;
     }
 
@@ -86,11 +111,49 @@ std::error_code GsmModem::initialize()
         return ec;
     }
 
-    if (auto ec = read_string(128, answer); ec) {
+    buffer.data.clear();
+
+    if (auto ec = wait_until_ok(buffer, std::chrono::seconds(3)); ec) {
         return ec;
     }
 
-    if (answer.find("OK") == std::string::npos) {
+    return {};
+}
+
+/**
+ * @brief Waits for the modem to respond with a prompt.
+ * @param timeout The timeout duration.
+ * @return An error code if the operation failed.
+ */
+std::error_code GsmModem::expect_prompt(std::chrono::milliseconds timeout)
+{
+    ResponseBuffer buffer;
+    const auto deadline = std::chrono::steady_clock::now() + timeout;
+
+    while (std::chrono::steady_clock::now() < deadline) {
+        std::string chunk;
+
+        if (auto ec = read_string(128, chunk); ec) {
+            return ec;
+        }
+
+        if (!chunk.empty()) {
+            buffer.data.append(chunk);
+        }
+
+        if (contains_token(buffer.data, ">") ||
+            classify_response(buffer.data) == ModemResponse::Error) {
+            break;
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    }
+
+    if (classify_response(buffer.data) == ModemResponse::Error) {
+        return make_error_code(Errc::ModemRejected);
+    }
+
+    if (buffer.data.find('>') == std::string::npos) {
         return make_error_code(Errc::ModemRejected);
     }
 
@@ -98,12 +161,15 @@ std::error_code GsmModem::initialize()
 }
 
 /**
- * @brief Send a message to the modem.
+ * @brief Sends a message to the modem.
  * @param message The message to send.
  * @param bytes_written The number of bytes written.
- * @return The error code.
+ * @param timeout The timeout duration.
+ * @return An error code if the operation failed.
  */
-std::error_code GsmModem::send_message(const Message& message, std::size_t* bytes_written)
+std::error_code GsmModem::send_message(const Message& message,
+                                       std::size_t* bytes_written,
+                                       std::chrono::milliseconds timeout)
 {
     if (!port_->is_open()) {
         return make_error_code(Errc::NotOpen);
@@ -120,15 +186,16 @@ std::error_code GsmModem::send_message(const Message& message, std::size_t* byte
     std::uint8_t smsc_len = 0;
     {
         std::vector<std::uint8_t> first;
+
         if (auto ec = PduCodec::hex_to_bytes(std::string_view{pdu_hex}.substr(0, 2), first); ec) {
             return ec;
         }
+
         smsc_len = first.empty() ? std::uint8_t{0} : first[0];
     }
 
     ++smsc_len; // include the length byte itself
 
-    // pdu_hex includes a trailing Ctrl-Z which is not part of the hex PDU.
     const std::size_t hex_only = pdu_hex.size() - 1;
     const int cmgs_len = static_cast<int>(hex_only / 2) - static_cast<int>(smsc_len);
 
@@ -139,17 +206,8 @@ std::error_code GsmModem::send_message(const Message& message, std::size_t* byte
         return ec;
     }
 
-    std::string answer;
-
-    if (auto ec = read_string(128, answer); ec) {
+    if (auto ec = expect_prompt(std::chrono::seconds(5)); ec) {
         return ec;
-    }
-
-    if (answer.size() < 4 || answer.find("\r\n> ") == std::string::npos) {
-        // Some modems emit ">" without the exact historic 4-byte pattern.
-        if (answer.find('>') == std::string::npos) {
-            return make_error_code(Errc::ModemRejected);
-        }
     }
 
     std::size_t written = 0;
@@ -162,12 +220,18 @@ std::error_code GsmModem::send_message(const Message& message, std::size_t* byte
         *bytes_written = written;
     }
 
+    ResponseBuffer buffer;
+
+    if (auto ec = wait_until_ok(buffer, timeout); ec) {
+        return ec;
+    }
+
     return {};
 }
 
 /**
- * @brief Request the message list from the modem.
- * @return The error code.
+ * @brief Requests the message list from the modem.
+ * @return An error code if the operation failed.
  */
 std::error_code GsmModem::request_message_list()
 {
@@ -175,9 +239,9 @@ std::error_code GsmModem::request_message_list()
 }
 
 /**
- * @brief Delete a message from the modem.
+ * @brief Deletes a message from the modem.
  * @param index The index of the message to delete.
- * @return The error code.
+ * @return An error code if the operation failed.
  */
 std::error_code GsmModem::delete_message(int index)
 {
@@ -192,15 +256,43 @@ std::error_code GsmModem::delete_message(int index)
 }
 
 /**
- * @brief Poll the response from the modem.
- * @param buffer The response buffer.
- * @return The response.
+ * @brief Classifies a response from the modem.
+ * @param data The data to classify.
+ * @return The modem response.
+ */
+ModemResponse GsmModem::classify_response(std::string_view data)
+{
+    if (data.empty()) {
+        return ModemResponse::Wait;
+    }
+
+    // Prefer final-result framing; also accept bare suffixes from some modems.
+    if (contains_token(data, "\r\nOK\r\n") || ends_with(data, "OK\r\n") || ends_with(data, "\nOK\n") ||
+        ends_with(data, "OK\n") || ends_with(data, "OK\r")) {
+        return ModemResponse::Ok;
+    }
+
+    if (contains_token(data, "+CMS ERROR") || contains_token(data, "+CME ERROR") ||
+        contains_token(data, "\r\nERROR\r\n") || ends_with(data, "ERROR\r\n") ||
+        ends_with(data, "ERROR\n") || ends_with(data, "ERROR\r")) {
+        return ModemResponse::Error;
+    }
+
+    return ModemResponse::Wait;
+}
+
+/**
+ * @brief Polls the modem for a response.
+ * @param buffer The buffer to store the response.
+ * @return The modem response.
  */
 ModemResponse GsmModem::poll_response(ResponseBuffer& buffer)
 {
     std::string chunk;
 
-    if (read_string(128, chunk)) {
+    if (auto ec = read_string(256, chunk); ec) {
+        // Soft serial timeouts usually return success with empty data.
+        // Hard failures are treated as "keep waiting" so callers can time out.
         return ModemResponse::Wait;
     }
 
@@ -208,25 +300,73 @@ ModemResponse GsmModem::poll_response(ResponseBuffer& buffer)
         buffer.data.append(chunk);
     }
 
-    if (buffer.data.size() >= 4) {
-        if (buffer.data.size() >= 4 &&
-            buffer.data.compare(buffer.data.size() - 4, 4, "OK\r\n") == 0) {
-            return ModemResponse::Ok;
-        }
-
-        if (buffer.data.find("+CMS ERROR") != std::string::npos ||
-            buffer.data.find("ERROR") != std::string::npos) {
-            return ModemResponse::Error;
-        }
-    }
-
-    return ModemResponse::Wait;
+    return classify_response(buffer.data);
 }
 
 /**
- * @brief Parse the message list from the response buffer.
- * @param buffer The response buffer.
- * @return The parsed messages.
+ * @brief Waits for a response from the modem.
+ * @param buffer The buffer to store the response.
+ * @param timeout The timeout duration.
+ * @param poll_interval The poll interval.
+ * @return The modem response.
+ */
+ModemResponse GsmModem::wait_for_response(ResponseBuffer& buffer,
+                                         std::chrono::milliseconds timeout,
+                                         std::chrono::milliseconds poll_interval)
+{
+    if (timeout.count() < 0) {
+        return ModemResponse::Wait;
+    }
+
+    if (poll_interval.count() <= 0) {
+        poll_interval = std::chrono::milliseconds(1);
+    }
+
+    // Already complete?
+    if (const auto existing = classify_response(buffer.data); existing != ModemResponse::Wait) {
+        return existing;
+    }
+
+    const auto deadline = std::chrono::steady_clock::now() + timeout;
+
+    while (std::chrono::steady_clock::now() < deadline) {
+        const auto status = poll_response(buffer);
+        if (status != ModemResponse::Wait) {
+            return status;
+        }
+        std::this_thread::sleep_for(poll_interval);
+    }
+
+    // Final drain attempt before giving up.
+    return poll_response(buffer);
+}
+
+/**
+ * @brief Waits for the modem to respond with an OK.
+ * @param buffer The buffer to store the response.
+ * @param timeout The timeout duration.
+ * @param poll_interval The poll interval.
+ * @return An error code if the operation failed.
+ */
+std::error_code GsmModem::wait_until_ok(ResponseBuffer& buffer,
+                                        std::chrono::milliseconds timeout,
+                                        std::chrono::milliseconds poll_interval)
+{
+    switch (wait_for_response(buffer, timeout, poll_interval)) {
+    case ModemResponse::Ok:
+        return {};
+    case ModemResponse::Error:
+        return make_error_code(Errc::ModemRejected);
+    case ModemResponse::Wait:
+    default:
+        return make_error_code(Errc::Timeout);
+    }
+}
+
+/**
+ * @brief Parses the message list from the modem.
+ * @param buffer The buffer to store the response.
+ * @return The message list.
  */
 std::vector<Message> GsmModem::parse_message_list(const ResponseBuffer& buffer)
 {
@@ -250,7 +390,6 @@ std::vector<Message> GsmModem::parse_message_list(const ResponseBuffer& buffer)
 
         ptr = line + 2;
 
-        // PDU hex runs until CR/LF.
         const char* end = std::strstr(ptr, "\r\n");
         std::string_view pdu = end ? std::string_view{ptr, static_cast<std::size_t>(end - ptr)}
                                    : std::string_view{ptr};
@@ -269,8 +408,8 @@ std::vector<Message> GsmModem::parse_message_list(const ResponseBuffer& buffer)
 }
 
 /**
- * @brief Get the serial port of the modem.
- * @return The serial port of the modem.
+ * @brief Gets the serial port.
+ * @return The serial port.
  */
 SerialPort& GsmModem::port() noexcept
 {
@@ -278,8 +417,8 @@ SerialPort& GsmModem::port() noexcept
 }
 
 /**
- * @brief Get the serial port of the modem.
- * @return The serial port of the modem.
+ * @brief Gets the serial port.
+ * @return The serial port.
  */
 const SerialPort& GsmModem::port() const noexcept
 {
@@ -287,9 +426,9 @@ const SerialPort& GsmModem::port() const noexcept
 }
 
 /**
- * @brief Write a string to the modem.
+ * @brief Writes a string to the modem.
  * @param text The string to write.
- * @return The error code.
+ * @return An error code if the operation failed.
  */
 std::error_code GsmModem::write_string(std::string_view text)
 {
@@ -297,10 +436,10 @@ std::error_code GsmModem::write_string(std::string_view text)
 }
 
 /**
- * @brief Read a string from the modem.
+ * @brief Reads a string from the modem.
  * @param max_bytes The maximum number of bytes to read.
- * @param out The string to read the data into.
- * @return The error code.
+ * @param out The string to store the read data.
+ * @return An error code if the operation failed.
  */
 std::error_code GsmModem::read_string(std::size_t max_bytes, std::string& out)
 {
@@ -309,7 +448,6 @@ std::error_code GsmModem::read_string(std::size_t max_bytes, std::string& out)
     if (auto ec = port_->read(max_bytes, raw); ec) {
         return ec;
     }
-
     out.assign(reinterpret_cast<const char*>(raw.data()), raw.size());
 
     return {};

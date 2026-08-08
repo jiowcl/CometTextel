@@ -9,8 +9,10 @@
 
 #pragma once
 
+#include <chrono>
 #include <cstddef>
 #include <string>
+#include <string_view>
 #include <system_error>
 #include <vector>
 
@@ -51,28 +53,59 @@ public:
     [[nodiscard]] std::error_code initialize();
 
     /**
-     * @brief Submits one SMS in PDU mode (@c AT+CMGS).
+     * @brief Submits one SMS in PDU mode (@c AT+CMGS) and waits for the final result.
      * @param message Message to send.
      * @param bytes_written Optional number of PDU bytes written after the prompt.
+     * @param timeout Maximum time to wait for the final OK/ERROR after Ctrl-Z.
      */
-    [[nodiscard]] std::error_code send_message(const Message& message,
-                                               std::size_t* bytes_written = nullptr);
+    [[nodiscard]] std::error_code send_message(
+        const Message& message,
+        std::size_t* bytes_written = nullptr,
+        std::chrono::milliseconds timeout = std::chrono::seconds(10));
 
     /**
      * @brief Requests the full message list (@c AT+CMGL).
-     * @note Call @ref poll_response repeatedly, then @ref parse_message_list.
+     * @note Prefer @ref wait_for_response / @ref wait_until_ok, then @ref parse_message_list.
      */
     [[nodiscard]] std::error_code request_message_list();
 
     /**
      * @brief Deletes a stored message by index (@c AT+CMGD).
+     * @note Call @ref wait_until_ok afterwards to confirm completion.
      */
     [[nodiscard]] std::error_code delete_message(int index);
+
+    /**
+     * @brief Classifies accumulated modem text without reading the serial port.
+     *
+     * Recognizes final result codes such as @c OK, @c ERROR, @c +CMS ERROR, and
+     * @c +CME ERROR (including common @c \\r\\n framing variants).
+     */
+    [[nodiscard]] static ModemResponse classify_response(std::string_view data);
 
     /**
      * @brief Appends freshly received serial data to @p buffer and classifies status.
      */
     [[nodiscard]] ModemResponse poll_response(ResponseBuffer& buffer);
+
+    /**
+     * @brief Polls until OK/ERROR or @p timeout elapses.
+     * @return @ref ModemResponse::Ok, @ref ModemResponse::Error, or
+     *         @ref ModemResponse::Wait on timeout.
+     */
+    [[nodiscard]] ModemResponse wait_for_response(
+        ResponseBuffer& buffer,
+        std::chrono::milliseconds timeout = std::chrono::seconds(5),
+        std::chrono::milliseconds poll_interval = std::chrono::milliseconds(50));
+
+    /**
+     * @brief Convenience wrapper around @ref wait_for_response.
+     * @return Empty on OK; @ref Errc::ModemRejected on ERROR; @ref Errc::Timeout otherwise.
+     */
+    [[nodiscard]] std::error_code wait_until_ok(
+        ResponseBuffer& buffer,
+        std::chrono::milliseconds timeout = std::chrono::seconds(5),
+        std::chrono::milliseconds poll_interval = std::chrono::milliseconds(50));
 
     /**
      * @brief Parses @c +CMGL lines from a completed response buffer.
@@ -96,6 +129,7 @@ private:
 
     [[nodiscard]] std::error_code write_string(std::string_view text);
     [[nodiscard]] std::error_code read_string(std::size_t max_bytes, std::string& out);
+    [[nodiscard]] std::error_code expect_prompt(std::chrono::milliseconds timeout);
 };
 
 } // namespace comettextel

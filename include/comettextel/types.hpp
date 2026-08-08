@@ -82,8 +82,9 @@ struct Message {
     std::uint8_t protocol_id{0}; ///< TP-PID
     DataCoding coding{DataCoding::Ucs2}; ///< TP-DCS
     std::string service_timestamp; ///< TP-SCTS (receive path)
-    std::string user_data; ///< Decoded TP-UD text / bytes as characters
+    std::string user_data; ///< Decoded TP-UD text / bytes as characters (UDH stripped when present)
     std::int16_t index{-1}; ///< Storage index when listing messages
+    bool has_udh{false}; ///< True when TP-UDHI was set (header skipped; not reassembled)
 };
 
 /**
