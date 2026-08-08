@@ -49,7 +49,7 @@ Artifacts (Release):
 
 - Windows: `build/Release/comettextel.dll`, `build/Release/comettextel_static.lib`  
 - Unix: `libcomettextel.so` / `libcomettextel.a`  
-- Example: `build/examples/Release/comettextel_send_example.exe`  
+- Example: `build/examples/Release/comettextel_*_example.exe`  
 
 Run unit tests:  
 
@@ -103,7 +103,7 @@ The **Release** workflow (`.github/workflows/release.yml`) builds, tests, and at
 - `comettextel-<version>-windows-x64.zip`  
 - `comettextel-<version>-linux-x64.tar.gz`  
 
-## Example  
+## API Example  
 
 ```cpp
 #include "comettextel/comettextel.hpp"
@@ -136,10 +136,31 @@ int main()
 }
 ```
 
-Or run the bundled example:  
+## Examples  
+
+Send one UCS-2 SMS:  
 
 ```bash
 comettextel_send_example COM3 886932000000 886912345678 "Hello"
+```
+
+List stored messages (summary):  
+
+```bash
+comettextel_list_example COM3
+```
+
+Read the inbox (full text; optional wait for `+CMTI`):  
+
+```bash
+comettextel_receive_example COM3
+comettextel_receive_example COM3 15
+```
+
+Delete one stored message by index:  
+
+```bash
+comettextel_delete_example COM3 1
 ```
 
 ## Layout  
@@ -172,7 +193,6 @@ Code released under the MIT license.
 ## TODO  
 
 - Longer modem response handling / async I/O  
-- More examples (list / delete / receive)  
 
 ## Donation  
 
