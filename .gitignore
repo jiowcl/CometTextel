@@ -1,7 +1,13 @@
 # Build
 build/
+build-*/
 cmake-build-*/
 out/
+prefix/
+prefix-*/
+smoke-find/
+dist/
+artifact/
 
 # IDE / tooling
 .vs/

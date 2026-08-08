@@ -1,0 +1,20 @@
+@PACKAGE_INIT@
+
+include("${CMAKE_CURRENT_LIST_DIR}/comettextelTargets.cmake")
+
+# Provide a convenient default target: prefer shared, else static.
+if(NOT TARGET comettextel::comettextel)
+    if(TARGET comettextel::shared)
+        add_library(comettextel::comettextel INTERFACE IMPORTED)
+        set_target_properties(comettextel::comettextel PROPERTIES
+            INTERFACE_LINK_LIBRARIES comettextel::shared
+        )
+    elseif(TARGET comettextel::static)
+        add_library(comettextel::comettextel INTERFACE IMPORTED)
+        set_target_properties(comettextel::comettextel PROPERTIES
+            INTERFACE_LINK_LIBRARIES comettextel::static
+        )
+    endif()
+endif()
+
+check_required_components(comettextel)

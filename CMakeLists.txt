@@ -74,6 +74,7 @@ if(COMETTEXTEL_BUILD_SHARED)
     )
     set_target_properties(comettextel_shared PROPERTIES
         OUTPUT_NAME comettextel
+        EXPORT_NAME shared
         VERSION ${PROJECT_VERSION}
         SOVERSION ${PROJECT_VERSION_MAJOR}
         CXX_VISIBILITY_PRESET hidden
@@ -89,6 +90,7 @@ if(COMETTEXTEL_BUILD_STATIC)
     target_compile_definitions(comettextel_static PUBLIC COMETTEXTEL_STATIC)
     set_target_properties(comettextel_static PROPERTIES
         OUTPUT_NAME comettextel
+        EXPORT_NAME static
         VERSION ${PROJECT_VERSION}
     )
     if(WIN32 AND COMETTEXTEL_BUILD_SHARED)
@@ -117,14 +119,37 @@ if(COMETTEXTEL_BUILD_DOCS)
 endif()
 
 include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+
 install(TARGETS ${COMETTEXTEL_INSTALL_TARGETS}
     EXPORT comettextelTargets
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 install(DIRECTORY include/comettextel DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
 install(EXPORT comettextelTargets
+    FILE comettextelTargets.cmake
     NAMESPACE comettextel::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/comettextel
+)
+
+configure_package_config_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/comettextelConfig.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/comettextelConfig.cmake"
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/comettextel
+)
+
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/comettextelConfigVersion.cmake"
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+)
+
+install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/comettextelConfig.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/comettextelConfigVersion.cmake"
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/comettextel
 )

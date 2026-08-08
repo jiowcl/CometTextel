@@ -69,6 +69,40 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on every push and pull request 
 
 Download build packages from the workflow **Artifacts** tab (retained 14 days).  
 
+## Install & find_package  
+
+```bash
+cmake -S . -B build -A x64 -DCOMETTEXTEL_BUILD_EXAMPLES=OFF
+cmake --build build --config Release
+cmake --install build --config Release --prefix ./prefix
+```
+
+Consumer project:  
+
+```cmake
+find_package(comettextel 1.0 REQUIRED CONFIG)
+target_link_libraries(app PRIVATE comettextel::comettextel)
+# or explicitly:
+# target_link_libraries(app PRIVATE comettextel::shared)
+# target_link_libraries(app PRIVATE comettextel::static)
+```
+
+Set `CMAKE_PREFIX_PATH` to the install prefix if needed.  
+
+## Releases  
+
+Push a version tag to publish a GitHub Release with binaries:  
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+The **Release** workflow (`.github/workflows/release.yml`) builds, tests, and attaches:  
+
+- `comettextel-<version>-windows-x64.zip`  
+- `comettextel-<version>-linux-x64.tar.gz`  
+
 ## Example  
 
 ```cpp
@@ -112,7 +146,7 @@ comettextel_send_example COM3 886932000000 886912345678 "Hello"
 
 ```text
 comettextel/
-├── cmake/                 # Compiler options, Doxygen
+├── cmake/                 # Compiler options, Doxygen, package config
 ├── examples/              # Sample programs
 ├── include/comettextel/   # Public headers
 ├── src/                   # Library sources
@@ -139,7 +173,6 @@ Code released under the MIT license.
 
 - Longer modem response handling / async I/O  
 - More examples (list / delete / receive)  
-- Package config (`comettextelConfig.cmake`) for `find_package`  
 
 ## Donation  
 
