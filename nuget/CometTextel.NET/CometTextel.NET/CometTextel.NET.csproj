@@ -1,0 +1,65 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0-windows;net9.0-windows;net10.0-windows</TargetFrameworks>
+    <Company>Inwazy Technology</Company>
+    <Copyright>Ji-Feng Tsai</Copyright>
+    <Description>.NET 8/9/10 Windows x64 wrapper for CometTextel (comettextel.dll): GSM SMS over serial via P/Invoke C ABI — send, list, delete, and PDU helpers.</Description>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <PackageId>CometTextel.NET</PackageId>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <RepositoryUrl>https://github.com/jiowcl/CometTextel</RepositoryUrl>
+    <PackageReleaseNotes>Initial NuGet: C ABI P/Invoke wrapper for CometTextel win-x64 (send/list/delete + PDU encode/decode).</PackageReleaseNotes>
+    <PackageTags>comettextel;sms;gsm;pdu;modem;serial;pinvoke;windows;x64</PackageTags>
+    <Authors>Jiowcl</Authors>
+    <PackageProjectUrl>https://github.com/jiowcl/CometTextel</PackageProjectUrl>
+    <Platforms>AnyCPU;x64</Platforms>
+    <Version>1.0.0</Version>
+    <PlatformTarget>x64</PlatformTarget>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>CometTextel.NET</RootNamespace>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <Optimize>true</Optimize>
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Optimize>true</Optimize>
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\LICENSE" Link="LICENSE">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
+    <None Include="..\README.md" Link="README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Copied by pack.ps1 from the C++ Release build. Pack requires the file (see EnsureNativeDll). -->
+    <None Include="Lib\comettextel.dll" Condition="Exists('Lib\comettextel.dll')" Pack="true" PackagePath="runtimes/win-x64/native/comettextel.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <TargetPath>comettextel.dll</TargetPath>
+      <Link>comettextel.dll</Link>
+    </None>
+  </ItemGroup>
+
+  <Target Name="EnsureNativeDll" BeforeTargets="GenerateNuspec;Pack">
+    <Error Condition="!Exists('$(MSBuildProjectDirectory)\Lib\comettextel.dll')" Text="Missing Lib\comettextel.dll. Run nuget\CometTextel.NET\pack.ps1 (or copy a win-x64 Release build) before packing." />
+  </Target>
+
+</Project>

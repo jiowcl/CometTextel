@@ -1,0 +1,8 @@
+bin/
+obj/
+artifacts/
+**/Lib/comettextel.dll
+.vs/
+*.user
+*.nupkg
+*.snupkg
