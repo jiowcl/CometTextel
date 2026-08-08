@@ -56,12 +56,21 @@ if ($LASTEXITCODE -ne 0) {
     throw "dotnet test failed"
 }
 
+# Smoke tests only build the TFM used by the test project; rebuild all TFMs before pack (NU5026).
+$PackProj = Join-Path $NugetRoot "CometTextel.NET\CometTextel.NET.csproj"
+Write-Host "==> Build all TargetFrameworks for pack"
+dotnet build $PackProj -c $Configuration -p:Platform=$Platform
+if ($LASTEXITCODE -ne 0) {
+    throw "dotnet build (pack prep) failed"
+}
+
 Write-Host "==> Pack NuGet"
 New-Item -ItemType Directory -Force -Path $Artifacts | Out-Null
-dotnet pack (Join-Path $NugetRoot "CometTextel.NET\CometTextel.NET.csproj") `
+dotnet pack $PackProj `
     -c $Configuration `
     -p:Platform=$Platform `
-    -o $Artifacts
+    -o $Artifacts `
+    --no-build
 if ($LASTEXITCODE -ne 0) {
     throw "dotnet pack failed"
 }

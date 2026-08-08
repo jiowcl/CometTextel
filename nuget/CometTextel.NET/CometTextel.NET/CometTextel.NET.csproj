@@ -5,7 +5,7 @@
     <Company>Inwazy Technology</Company>
     <Copyright>Ji-Feng Tsai</Copyright>
     <Description>.NET 8/9/10 Windows x64 wrapper for CometTextel (comettextel.dll): GSM SMS over serial via P/Invoke C ABI — send, list, delete, and PDU helpers.</Description>
-    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <PackageId>CometTextel.NET</PackageId>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <RepositoryUrl>https://github.com/jiowcl/CometTextel</RepositoryUrl>
