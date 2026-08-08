@@ -29,6 +29,7 @@ jobs:
           -DCOMETTEXTEL_BUILD_TESTS=ON
           -DCOMETTEXTEL_BUILD_EXAMPLES=OFF
           -DCOMETTEXTEL_BUILD_DOCS=OFF
+          -DCOMETTEXTEL_BUILD_C_API=ON
 
       - name: Build
         run: cmake --build build --config Release --parallel
@@ -53,6 +54,32 @@ jobs:
         with:
           name: comettextel-windows-x64
           path: artifact/comettextel-windows-x64
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: .NET PDU smoke tests
+        shell: pwsh
+        run: |
+          $lib = "nuget/CometTextel.NET/CometTextel.NET/Lib"
+          New-Item -ItemType Directory -Force -Path $lib | Out-Null
+          Copy-Item "build/Release/comettextel.dll" "$lib/comettextel.dll" -Force
+          dotnet test "nuget/CometTextel.NET/CometTextel.NET.Tests/CometTextel.NET.Tests.csproj" `
+            -c Release -p:Platform=x64 --verbosity normal
+
+      - name: Pack NuGet
+        shell: pwsh
+        run: |
+          $lib = "nuget/CometTextel.NET/CometTextel.NET/Lib"
+          New-Item -ItemType Directory -Force -Path $lib | Out-Null
+          Copy-Item "build/Release/comettextel.dll" "$lib/comettextel.dll" -Force
+          New-Item -ItemType Directory -Force -Path "artifact/nuget" | Out-Null
+          dotnet pack "nuget/CometTextel.NET/CometTextel.NET/CometTextel.NET.csproj" -c Release -p:Platform=x64 -o artifact/nuget
+
+      - name: Upload NuGet package
+        uses: actions/upload-artifact@v4
+        with:
+          name: CometTextel.NET-nupkg
+          path: artifact/nuget/*.nupkg
           if-no-files-found: error
           retention-days: 14
 

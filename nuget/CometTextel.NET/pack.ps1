@@ -47,6 +47,15 @@ if (-not (Test-Path $libDll)) {
     throw "Lib DLL missing before pack: $libDll"
 }
 
+Write-Host "==> .NET PDU smoke tests"
+dotnet test (Join-Path $NugetRoot "CometTextel.NET.Tests\CometTextel.NET.Tests.csproj") `
+    -c $Configuration `
+    -p:Platform=$Platform `
+    --verbosity minimal
+if ($LASTEXITCODE -ne 0) {
+    throw "dotnet test failed"
+}
+
 Write-Host "==> Pack NuGet"
 New-Item -ItemType Directory -Force -Path $Artifacts | Out-Null
 dotnet pack (Join-Path $NugetRoot "CometTextel.NET\CometTextel.NET.csproj") `

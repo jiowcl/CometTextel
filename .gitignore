@@ -1,6 +1,7 @@
 # Build
 build/
 build-*/
+build-nuget/
 cmake-build-*/
 out/
 prefix/

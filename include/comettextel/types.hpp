@@ -53,6 +53,7 @@ enum class Errc : int {
 
 /**
  * @brief Error category for @ref Errc.
+ * @return The error category.
  */
 class ErrorCategory final : public std::error_category {
 public:
@@ -62,11 +63,14 @@ public:
 
 /**
  * @brief Returns the singleton error category for this library.
+ * @return The error category.
  */
 [[nodiscard]] COMETTEXTEL_API const std::error_category& error_category() noexcept;
 
 /**
  * @brief Creates an error_code from @ref Errc.
+ * @param e The error code.
+ * @return The error code.
  */
 [[nodiscard]] inline std::error_code make_error_code(Errc e) noexcept
 {

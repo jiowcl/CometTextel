@@ -55,6 +55,7 @@ Optional flags:
 | `COMETTEXTEL_BUILD_EXAMPLES` | `ON` | Build example programs |
 | `COMETTEXTEL_BUILD_TESTS` | `ON` | Build unit tests |
 | `COMETTEXTEL_BUILD_DOCS` | `OFF` | Generate Doxygen docs |
+| `COMETTEXTEL_BUILD_C_API` | `ON` | Build stable C ABI (`c_api.h`) for P/Invoke / NuGet |
 
 Artifacts (Release):  
 
@@ -75,12 +76,24 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on every push and pull request 
 
 - **Windows (MSVC x64)**: configure, build, run CTest, upload `comettextel-windows-x64`  
   (`bin/comettextel.dll`, import/static libs, headers)  
+- **Windows .NET**: PDU smoke tests (`CometTextel.NET.Tests`, including UCS-2 Chinese), then pack/upload `CometTextel.NET-nupkg`  
 - **Linux (GCC 14)**: configure, build, run CTest, upload `comettextel-linux-x64`  
   (`libcomettextel.so*`, `libcomettextel.a`, headers)  
 
 Download build packages from the workflow **Artifacts** tab (retained 14 days).  
 
 For a step-by-step “download → include → link” walkthrough, see [doc/getting-started.md](doc/getting-started.md).  
+
+## .NET NuGet (optional)  
+
+A separate C# wrapper lives under [`nuget/CometTextel.NET`](nuget/CometTextel.NET) (style similar to ThinBasic.NET):  
+
+```powershell
+cd nuget/CometTextel.NET
+.\pack.ps1
+```
+
+This builds `comettextel.dll` with the C ABI and produces `CometTextel.NET.*.nupkg`. See that folder’s README for Install-Package / Quick start.  
 
 ## Install & find_package  
 
@@ -183,7 +196,8 @@ comettextel/
 ├── cmake/                 # Compiler options, Doxygen, package config
 ├── doc/                   # User guides
 ├── examples/              # Sample programs
-├── include/comettextel/   # Public headers
+├── include/comettextel/   # Public headers (+ c_api.h)
+├── nuget/CometTextel.NET/ # Optional .NET NuGet wrapper (P/Invoke)
 ├── src/                   # Library sources
 │   └── serial/            # Win32 / POSIX backends
 ├── tests/                 # Unit tests (CTest)

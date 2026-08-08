@@ -90,6 +90,16 @@ foreach (var message in modem.List())
 // modem.Delete(index: 1);
 ```
 
+## Smoke tests
+
+Requires `CometTextel.NET/Lib/comettextel.dll` (same as packing):
+
+```powershell
+dotnet test CometTextel.NET.Tests\CometTextel.NET.Tests.csproj -c Release -p:Platform=x64
+```
+
+`pack.ps1` and Windows CI run these before producing the NuGet package.
+
 ## Examples project
 
 From `nuget/CometTextel.NET` (after `pack.ps1` or a native Release build that copied `Lib/comettextel.dll`):

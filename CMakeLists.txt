@@ -16,6 +16,7 @@ option(COMETTEXTEL_BUILD_STATIC "Build the static library" ON)
 option(COMETTEXTEL_BUILD_EXAMPLES "Build example programs" ON)
 option(COMETTEXTEL_BUILD_TESTS "Build unit tests" ON)
 option(COMETTEXTEL_BUILD_DOCS "Build Doxygen documentation" OFF)
+option(COMETTEXTEL_BUILD_C_API "Build the stable C ABI (for P/Invoke / NuGet)" ON)
 
 if(NOT COMETTEXTEL_BUILD_SHARED AND NOT COMETTEXTEL_BUILD_STATIC)
     message(FATAL_ERROR "At least one of COMETTEXTEL_BUILD_SHARED or COMETTEXTEL_BUILD_STATIC must be ON")
@@ -38,6 +39,11 @@ set(COMETTEXTEL_COMMON_SOURCES
     src/pdu.cpp
     src/modem.cpp
 )
+
+if(COMETTEXTEL_BUILD_C_API)
+    list(APPEND COMETTEXTEL_PUBLIC_HEADERS include/comettextel/c_api.h)
+    list(APPEND COMETTEXTEL_COMMON_SOURCES src/c_api.cpp)
+endif()
 
 if(WIN32)
     list(APPEND COMETTEXTEL_COMMON_SOURCES src/serial/serial_win32.cpp)

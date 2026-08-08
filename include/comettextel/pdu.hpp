@@ -31,16 +31,23 @@ public:
 
     /**
      * @brief Converts a binary buffer to an uppercase hex string.
+     * @param bytes The bytes to convert.
+     * @return The uppercase hex string.
      */
     [[nodiscard]] static std::string bytes_to_hex(std::span<const std::uint8_t> bytes);
 
     /**
      * @brief Parses an uppercase/lowercase hex string into bytes.
+     * @param hex The hex string to parse.
+     * @param out The destination bytes.
+     * @return Empty error_code on success.
      */
     [[nodiscard]] static std::error_code hex_to_bytes(std::string_view hex, std::vector<std::uint8_t>& out);
 
     /**
      * @brief Packs septets into the GSM 7-bit packing format.
+     * @param text The text to encode.
+     * @return The encoded 7-bit bytes.
      */
     [[nodiscard]] static std::vector<std::uint8_t> encode_7bit(std::string_view text);
 
@@ -48,29 +55,40 @@ public:
      * @brief Unpacks GSM 7-bit packed data into a 7-bit character string.
      * @param packed Packed octets.
      * @param septet_count Number of septets described by TP-UDL.
+     * @return The decoded 7-bit string.
      */
     [[nodiscard]] static std::string decode_7bit(std::span<const std::uint8_t> packed,
                                                  std::size_t septet_count);
 
     /**
      * @brief Encodes text as UCS-2 (UTF-16BE) octets.
+     * @param utf8 The UTF-8 string to encode.
+     * @param out The destination bytes.
+     * @return Empty error_code on success.
      */
     [[nodiscard]] static std::error_code encode_ucs2(std::string_view utf8,
                                                      std::vector<std::uint8_t>& out);
 
     /**
      * @brief Decodes UCS-2 (UTF-16BE) octets into a UTF-8 string.
+     * @param bytes The bytes to decode.
+     * @param out The destination string.
+     * @return Empty error_code on success.
      */
     [[nodiscard]] static std::error_code decode_ucs2(std::span<const std::uint8_t> bytes,
                                                      std::string& out);
 
     /**
      * @brief Swaps digit pairs for GSM semi-octet address fields, padding with 'F'.
+     * @param digits The digits to invert.
+     * @return The inverted digits.
      */
     [[nodiscard]] static std::string invert_digits(std::string_view digits);
 
     /**
      * @brief Restores normal digit order from a semi-octet hex field.
+     * @param inverted The inverted digits.
+     * @return The serialized digits.
      */
     [[nodiscard]] static std::string serialize_digits(std::string_view inverted);
 

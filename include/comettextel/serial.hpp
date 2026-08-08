@@ -89,6 +89,7 @@ public:
 
     /**
      * @brief Returns whether the port currently holds an open handle.
+     * @return True if the port is open, false otherwise.
      */
     [[nodiscard]] bool is_open() const noexcept;
 
@@ -102,6 +103,9 @@ public:
 
     /**
      * @brief Convenience overload for character buffers.
+     * @param data The string to write.
+     * @param written Optional out-parameter for the number of bytes written.
+     * @return Empty error_code on success.
      */
     [[nodiscard]] std::error_code write(std::string_view data, std::size_t* written = nullptr);
 
@@ -115,11 +119,15 @@ public:
 
     /**
      * @brief Reads into an existing buffer and returns the number of bytes read.
+     * @param buffer The buffer to read into.
+     * @param read_count The number of bytes read.
+     * @return Empty error_code on success.
      */
     [[nodiscard]] std::error_code read(std::span<std::byte> buffer, std::size_t& read_count);
 
     /**
      * @brief Returns the device path used in the last successful @ref open.
+     * @return The device path used in the last successful @ref open.
      */
     [[nodiscard]] const std::string& device() const noexcept;
 

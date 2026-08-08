@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include <string>
 #include <string_view>
@@ -16,6 +17,9 @@
 
 #include "comettextel/modem.hpp"
 #include "comettextel/pdu.hpp"
+#if defined(COMETTEXTEL_HAS_C_API)
+#include "comettextel/c_api.h"
+#endif
 
 namespace {
 
@@ -309,7 +313,6 @@ void test_decode_skips_udh_ucs2()
 
 void test_decode_skips_udh_eightbit()
 {
-    // Same framing as above, 8-bit DCS, payload "Hi".
     constexpr std::string_view kPdu =
         "00440491214300040000000000000008"
         "050003AA0201"
@@ -320,6 +323,24 @@ void test_decode_skips_udh_eightbit()
     CHECK(message.has_udh);
     CHECK(message.coding == comettextel::DataCoding::EightBit);
     CHECK(message.user_data == "Hi");
+}
+
+void test_c_api_pdu_roundtrip()
+{
+#if defined(COMETTEXTEL_HAS_C_API)
+    char hex[1024]{};
+    CHECK(ct_pdu_encode_submit("886932000000", "886912345678", "Hello", CT_DCS_UCS2, hex,
+                               sizeof(hex)) == CT_OK);
+    CHECK(std::strlen(hex) > 0U);
+
+    ct_message message{};
+    CHECK(ct_pdu_decode(hex, &message) == CT_OK);
+    CHECK(std::string_view{message.peer_address} == "886912345678");
+    CHECK(std::string_view{message.user_data} == "Hello");
+    CHECK(message.dcs == CT_DCS_UCS2);
+#else
+    CHECK(true);
+#endif
 }
 
 } // namespace
@@ -341,6 +362,7 @@ int main()
     test_classify_response();
     test_decode_skips_udh_ucs2();
     test_decode_skips_udh_eightbit();
+    test_c_api_pdu_roundtrip();
 
     if (g_failures != 0) {
         std::cerr << g_failures << " check(s) failed\n";

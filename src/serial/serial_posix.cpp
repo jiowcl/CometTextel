@@ -303,6 +303,7 @@ std::error_code SerialPort::read(std::size_t max_bytes, std::vector<std::byte>& 
     std::size_t read_count = 0;
     const auto ec = read(std::span<std::byte>{out.data(), out.size()}, read_count);
     out.resize(read_count);
+    
     return ec;
 }
 
