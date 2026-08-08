@@ -9,8 +9,8 @@ Short guide to use a prebuilt **CometTextel** package in your own project.
 1. Open [Actions](https://github.com/jiowcl/CometTextel/actions).  
 2. Select the latest successful **CI** workflow on `main`.  
 3. Download one of:  
-   - `comettextel-windows-x64`  
-   - `comettextel-linux-x64`  
+   - `comettextel-windows-x64` / `comettextel-linux-x64` (full C++ package)  
+   - `comettextel-c-sdk-windows-x64` / `comettextel-c-sdk-linux-x64` (**C ABI only**)  
 4. Unzip / extract locally (Artifacts are retained for 14 days).  
 
 **Option B — GitHub Release (versioned)**  
@@ -19,6 +19,8 @@ Short guide to use a prebuilt **CometTextel** package in your own project.
 2. Download:  
    - `comettextel-<version>-windows-x64.zip`  
    - `comettextel-<version>-linux-x64.tar.gz`  
+   - `comettextel-<version>-c-sdk-windows-x64.zip`  
+   - `comettextel-<version>-c-sdk-linux-x64.tar.gz`  
 
 ## 2. Package layout  
 
@@ -195,7 +197,25 @@ comettextel_receive_example COM3
 comettextel_delete_example COM3 1
 ```
 
+With `COMETTEXTEL_BUILD_C_API=ON` as well:  
+
+```bash
+comettextel_c_api_example pdu 886912345678 "Hello" 886932000000
+```
+
+## 8. C SDK consumers  
+
+Prefer the dedicated **C SDK** artifact (or Release `*-c-sdk-*` archive). It ships only:
+
+- `include/comettextel/c_api.h`  
+- shared (+ optional static) library  
+- `examples/c_api_example.c`  
+- package `README.md` with compile/link commands  
+
+See [`sdk/c/README.md`](../sdk/c/README.md). For a full C++ tree, use the non-`c-sdk` package above.
+
 ## See also  
 
 - [README.md](../README.md) — build options, CI, releases  
-- `examples/` — send / list / receive / delete samples  
+- `examples/` — send / list / receive / delete samples (+ C ABI example)  
+- [`sdk/c/README.md`](../sdk/c/README.md) — C SDK layout and quick start  

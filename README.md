@@ -76,13 +76,27 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on every push and pull request 
 
 - **Windows (MSVC x64)**: configure, build, run CTest, upload `comettextel-windows-x64`  
   (`bin/comettextel.dll`, import/static libs, headers)  
+- **Windows C SDK**: upload `comettextel-c-sdk-windows-x64` (`c_api.h` + DLL/libs + `examples/c_api_example.c`)  
 - **Windows .NET**: PDU smoke tests (`CometTextel.NET.Tests`, including UCS-2 Chinese), then pack/upload `CometTextel.NET-nupkg`  
 - **Linux (GCC 14)**: configure, build, run CTest, upload `comettextel-linux-x64`  
   (`libcomettextel.so*`, `libcomettextel.a`, headers)  
+- **Linux C SDK**: upload `comettextel-c-sdk-linux-x64`  
 
 Download build packages from the workflow **Artifacts** tab (retained 14 days).  
 
 For a step-by-step “download → include → link” walkthrough, see [doc/getting-started.md](doc/getting-started.md).  
+
+## C SDK (optional)  
+
+Stable C ABI: [`include/comettextel/c_api.h`](include/comettextel/c_api.h).  
+Sample: [`examples/c_api_example.c`](examples/c_api_example.c) (built as `comettextel_c_api_example` when `COMETTEXTEL_BUILD_EXAMPLES=ON` and `COMETTEXTEL_BUILD_C_API=ON`).  
+
+```bash
+# After build (Release):
+comettextel_c_api_example pdu 886912345678 "Hello" 886932000000
+```
+
+CI / Release also publish focused **C SDK** artifacts (`comettextel-c-sdk-*`) with only `c_api.h`, shared/static libs, and the example source — see [`sdk/c/README.md`](sdk/c/README.md).  
 
 ## .NET NuGet (optional)  
 
@@ -128,6 +142,8 @@ The **Release** workflow (`.github/workflows/release.yml`) builds, tests, and at
 
 - `comettextel-<version>-windows-x64.zip`  
 - `comettextel-<version>-linux-x64.tar.gz`  
+- `comettextel-<version>-c-sdk-windows-x64.zip`  
+- `comettextel-<version>-c-sdk-linux-x64.tar.gz`  
 
 ## API Example  
 
@@ -195,9 +211,11 @@ comettextel_delete_example COM3 1
 comettextel/
 ├── cmake/                 # Compiler options, Doxygen, package config
 ├── doc/                   # User guides
-├── examples/              # Sample programs
+├── examples/              # Sample programs (+ c_api_example.c)
 ├── include/comettextel/   # Public headers (+ c_api.h)
 ├── nuget/CometTextel.NET/ # Optional .NET NuGet wrapper (P/Invoke)
+├── scripts/               # CI helpers (e.g. stage_c_sdk)
+├── sdk/c/                 # C SDK package README template
 ├── src/                   # Library sources
 │   └── serial/            # Win32 / POSIX backends
 ├── tests/                 # Unit tests (CTest)

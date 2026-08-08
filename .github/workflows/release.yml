@@ -26,8 +26,9 @@ jobs:
           -DCOMETTEXTEL_BUILD_SHARED=ON
           -DCOMETTEXTEL_BUILD_STATIC=ON
           -DCOMETTEXTEL_BUILD_TESTS=ON
-          -DCOMETTEXTEL_BUILD_EXAMPLES=OFF
+          -DCOMETTEXTEL_BUILD_EXAMPLES=ON
           -DCOMETTEXTEL_BUILD_DOCS=OFF
+          -DCOMETTEXTEL_BUILD_C_API=ON
 
       - name: Build
         run: cmake --build build --config Release --parallel
@@ -50,6 +51,10 @@ jobs:
           if (Test-Path LICENSE) { Copy-Item LICENSE "$out/" }
           if (Test-Path README.md) { Copy-Item README.md "$out/" }
           Compress-Archive -Path $out -DestinationPath "dist/$name.zip" -Force
+
+          $cName = "comettextel-$version-c-sdk-windows-x64"
+          ./scripts/stage_c_sdk.ps1 -OutDir "dist/$cName" -BuildDir build -Configuration Release
+          Compress-Archive -Path "dist/$cName" -DestinationPath "dist/$cName.zip" -Force
 
       - name: Upload Windows zip
         uses: actions/upload-artifact@v4
@@ -78,8 +83,9 @@ jobs:
           -DCOMETTEXTEL_BUILD_SHARED=ON
           -DCOMETTEXTEL_BUILD_STATIC=ON
           -DCOMETTEXTEL_BUILD_TESTS=ON
-          -DCOMETTEXTEL_BUILD_EXAMPLES=OFF
+          -DCOMETTEXTEL_BUILD_EXAMPLES=ON
           -DCOMETTEXTEL_BUILD_DOCS=OFF
+          -DCOMETTEXTEL_BUILD_C_API=ON
 
       - name: Build
         run: cmake --build build --parallel
@@ -102,6 +108,11 @@ jobs:
           [ -f README.md ] && cp README.md "$out/"
           mkdir -p dist
           tar -C dist -czf "dist/${name}.tar.gz" "$name"
+
+          c_name="comettextel-${version}-c-sdk-linux-x64"
+          chmod +x scripts/stage_c_sdk.sh
+          ./scripts/stage_c_sdk.sh --out "dist/${c_name}" --build-dir build
+          tar -C dist -czf "dist/${c_name}.tar.gz" "$c_name"
 
       - name: Upload Linux archive
         uses: actions/upload-artifact@v4

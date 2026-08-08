@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.28)
 project(comettextel
     VERSION 1.0.0
     DESCRIPTION "CometTextel — cross-platform GSM SMS library (serial + PDU)"
-    LANGUAGES CXX
+    LANGUAGES C CXX
 )
 
 set(CMAKE_CXX_STANDARD 23)
@@ -111,12 +111,15 @@ elseif(COMETTEXTEL_BUILD_STATIC)
     add_library(comettextel::comettextel ALIAS comettextel_static)
 endif()
 
+if(COMETTEXTEL_BUILD_TESTS)
+    enable_testing()
+endif()
+
 if(COMETTEXTEL_BUILD_EXAMPLES)
     add_subdirectory(examples)
 endif()
 
 if(COMETTEXTEL_BUILD_TESTS)
-    enable_testing()
     add_subdirectory(tests)
 endif()
 
