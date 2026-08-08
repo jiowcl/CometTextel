@@ -10,6 +10,8 @@
 ![CI](https://github.com/jiowcl/CometTextel/actions/workflows/ci.yml/badge.svg)
 ![Status](https://img.shields.io/badge/Status-Active-success)
 
+**First-time integration:** [doc/getting-started.md](doc/getting-started.md) (download Artifact / Release → include & link).  
+
 ## Features  
 
 - **Cross-Platform Serial Layer**: Unified `SerialPort` API with Win32 and POSIX backends.  
@@ -68,6 +70,8 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on every push and pull request 
   (`libcomettextel.so*`, `libcomettextel.a`, headers)  
 
 Download build packages from the workflow **Artifacts** tab (retained 14 days).  
+
+For a step-by-step “download → include → link” walkthrough, see [doc/getting-started.md](doc/getting-started.md).  
 
 ## Install & find_package  
 
@@ -168,6 +172,7 @@ comettextel_delete_example COM3 1
 ```text
 comettextel/
 ├── cmake/                 # Compiler options, Doxygen, package config
+├── doc/                   # User guides
 ├── examples/              # Sample programs
 ├── include/comettextel/   # Public headers
 ├── src/                   # Library sources

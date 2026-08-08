@@ -24,5 +24,6 @@ set(DOXYGEN_EXCLUDE_PATTERNS "*/build/*" "*/examples/*")
 doxygen_add_docs(comettextel_docs
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/src"
+    "${CMAKE_CURRENT_SOURCE_DIR}/doc"
     COMMENT "Generate API documentation with Doxygen"
 )
