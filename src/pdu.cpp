@@ -452,6 +452,11 @@ std::error_code PduCodec::encode(const Message& message, std::string& pdu_hex)
     std::vector<std::uint8_t> payload;
     switch (message.coding) {
     case DataCoding::Gsm7Bit: {
+        // Single-segment limit without UDH: 160 septets (GSM 03.40).
+        if (message.user_data.size() > 160) {
+            return make_error_code(Errc::EncodeFailure);
+        }
+
         const auto packed = encode_7bit(message.user_data);
         buf.push_back(static_cast<std::uint8_t>(message.user_data.size()));
         buf.insert(buf.end(), packed.begin(), packed.end());

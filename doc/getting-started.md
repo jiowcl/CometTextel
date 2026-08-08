@@ -175,6 +175,14 @@ int main()
 
 Requires a GSM modem that speaks AT commands in **PDU mode**.  
 
+## Limitations  
+
+- **Single-segment only** — no concatenated SMS / UDH (encode never sets UDHI; decode does not strip or reassemble UDH).  
+- Keep payloads within one segment:  
+  - GSM 7-bit ≤ 160 characters (septets)  
+  - 8-bit / UCS-2 ≤ 140 bytes  
+- Longer input fails encode with `EncodeFailure` instead of silent truncation.  
+
 ## 7. Try the bundled examples  
 
 If you build from source with `COMETTEXTEL_BUILD_EXAMPLES=ON`:  

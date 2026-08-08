@@ -79,6 +79,9 @@ public:
      * @param message Message parameters (SMSC, destination, coding, text).
      * @param pdu_hex Receives the hex PDU (without the trailing Ctrl-Z).
      * @return Empty error_code on success.
+     *
+     * @note Single-segment only (no UDH / concatenated SMS). Length limits:
+     *       GSM 7-bit ≤ 160 septets; 8-bit / UCS-2 ≤ 140 octets.
      */
     [[nodiscard]] static std::error_code encode(const Message& message, std::string& pdu_hex);
 
@@ -87,6 +90,9 @@ public:
      *
      * Supports SMS-DELIVER (receive) and SMS-SUBMIT (as produced by @ref encode)
      * based on the TP-MTI bits in the first TPDU octet.
+     *
+     * @note User-Data Header (UDH) is not interpreted; concatenated segments
+     *       are not reassembled.
      */
     [[nodiscard]] static std::error_code decode(std::string_view pdu_hex, Message& message);
 };

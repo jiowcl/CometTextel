@@ -21,6 +21,14 @@
 - **Shared & Static**: Build `comettextel` as a DLL/shared library and/or a static archive from one CMake tree.  
 - **Doxygen-Ready**: English API comments with author metadata for generated documentation.  
 
+## Limitations  
+
+- **Single-segment SMS only** — concatenated SMS / UDH is not supported (no UDHI, no segment split/reassembly).  
+- **Per-segment payload caps** (encode rejects longer input with `EncodeFailure`):  
+  - GSM 7-bit: ≤ **160** septets  
+  - 8-bit / UCS-2: ≤ **140** octets  
+- GSM 7-bit path treats input bytes as septets; it does not validate the full GSM 03.38 alphabet / escape table.  
+
 ## Environment  
 
 - Windows 10/11, Linux, or macOS  
@@ -198,6 +206,7 @@ Code released under the MIT license.
 ## TODO  
 
 - Longer modem response handling / async I/O  
+- Concatenated SMS / UDH (multi-part encode & decode)  
 
 ## Donation  
 

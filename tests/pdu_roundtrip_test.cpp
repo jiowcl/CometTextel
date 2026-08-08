@@ -232,6 +232,51 @@ void test_encode_rejects_empty_destination()
     CHECK(pdu_hex.empty());
 }
 
+void test_encode_rejects_overlong_payload()
+{
+    comettextel::Message base;
+    base.service_center = "886932000000";
+    base.peer_address = "886912345678";
+
+    {
+        comettextel::Message message = base;
+        message.coding = comettextel::DataCoding::Gsm7Bit;
+        message.user_data.assign(161, 'A');
+        std::string pdu_hex;
+        const auto ec = comettextel::PduCodec::encode(message, pdu_hex);
+        CHECK(ec == comettextel::make_error_code(comettextel::Errc::EncodeFailure));
+        CHECK(pdu_hex.empty());
+    }
+
+    {
+        comettextel::Message message = base;
+        message.coding = comettextel::DataCoding::Gsm7Bit;
+        message.user_data.assign(160, 'A');
+        std::string pdu_hex;
+        CHECK(!comettextel::PduCodec::encode(message, pdu_hex));
+        CHECK(!pdu_hex.empty());
+    }
+
+    {
+        comettextel::Message message = base;
+        message.coding = comettextel::DataCoding::EightBit;
+        message.user_data.assign(141, '\x01');
+        std::string pdu_hex;
+        const auto ec = comettextel::PduCodec::encode(message, pdu_hex);
+        CHECK(ec == comettextel::make_error_code(comettextel::Errc::EncodeFailure));
+    }
+
+    {
+        comettextel::Message message = base;
+        message.coding = comettextel::DataCoding::Ucs2;
+        // 71 BMP characters => 142 UCS-2 octets (> 140).
+        message.user_data.assign(71, 'B');
+        std::string pdu_hex;
+        const auto ec = comettextel::PduCodec::encode(message, pdu_hex);
+        CHECK(ec == comettextel::make_error_code(comettextel::Errc::EncodeFailure));
+    }
+}
+
 } // namespace
 
 int main()
@@ -247,6 +292,7 @@ int main()
     test_pdu_submit_default_smsc();
     test_pdu_deliver_path();
     test_encode_rejects_empty_destination();
+    test_encode_rejects_overlong_payload();
 
     if (g_failures != 0) {
         std::cerr << g_failures << " check(s) failed\n";
