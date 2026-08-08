@@ -4,6 +4,7 @@
 Send / list / delete short messages over a serial modem, or encode / decode PDU hex without hardware.
 
 ![GitHub](https://img.shields.io/github/license/jiowcl/CometTextel.svg)
+![.NET](https://img.shields.io/badge/.NET-512BD4?style=flat-square&logo=dotnet&logoColor=white)
 ![Nuget](https://img.shields.io/nuget/v/CometTextel.NET)
 ![CI](https://github.com/jiowcl/CometTextel/actions/workflows/ci.yml/badge.svg)
 
