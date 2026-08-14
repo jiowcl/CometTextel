@@ -4,6 +4,8 @@ Prebuilt package for consuming CometTextel from **C** (or any language that can 
 
 This is the same stable ABI used by **CometTextel.NET** (P/Invoke). Prefer the **shared** library for C apps.
 
+![C](https://img.shields.io/badge/language-c-blue.svg)
+
 ## Layout
 
 **Windows (`comettextel-c-sdk-windows-x64`)**
@@ -92,3 +94,4 @@ When using the static library, define `COMETTEXTEL_STATIC` before including `c_a
 
 - Full C++ package / `find_package`: repository [README](https://github.com/jiowcl/CometTextel) and `doc/getting-started.md`
 - .NET: `nuget/CometTextel.NET`
+- PureBasic (`OpenLibrary`, PDU only): [`sdk/purebasic/README.md`](../purebasic/README.md)

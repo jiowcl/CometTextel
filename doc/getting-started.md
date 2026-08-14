@@ -220,3 +220,4 @@ See [`sdk/c/README.md`](../sdk/c/README.md). For a full C++ tree, use the non-`c
 - [README.md](../README.md) — build options, CI, releases  
 - `examples/` — send / list / receive / delete samples (+ C ABI example)  
 - [`sdk/c/README.md`](../sdk/c/README.md) — C SDK layout and quick start  
+- [`sdk/purebasic/README.md`](../sdk/purebasic/README.md) — PureBasic OpenLibrary PDU sample (Windows x64, not in CI)  
