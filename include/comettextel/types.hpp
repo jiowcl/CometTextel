@@ -88,7 +88,11 @@ struct Message {
     std::string service_timestamp; ///< TP-SCTS (receive path)
     std::string user_data; ///< Decoded TP-UD text / bytes as characters (UDH stripped when present)
     std::int16_t index{-1}; ///< Storage index when listing messages
-    bool has_udh{false}; ///< True when TP-UDHI was set (header skipped; not reassembled)
+    bool has_udh{false}; ///< True when TP-UDHI was set (header skipped from user_data)
+    bool is_concatenated{false}; ///< True when a concat IE (0x00 / 0x08) was found in the UDH
+    std::uint16_t concat_ref{0}; ///< Concatenation reference number
+    std::uint8_t concat_total{0}; ///< Total segments (valid when is_concatenated)
+    std::uint8_t concat_seq{0}; ///< 1-based segment index (valid when is_concatenated)
 };
 
 /**

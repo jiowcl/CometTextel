@@ -65,6 +65,14 @@ typedef struct ct_message {
     char peer_address[32];
     char service_timestamp[32];
     char user_data[512];
+    /** @brief 1 when a concatenated SMS IE was found in the UDH. */
+    int32_t is_concatenated;
+    /** @brief Concatenation reference (8- or 16-bit IE). */
+    int32_t concat_ref;
+    /** @brief Total segment count (valid when is_concatenated != 0). */
+    int32_t concat_total;
+    /** @brief 1-based segment index (valid when is_concatenated != 0). */
+    int32_t concat_seq;
 } ct_message;
 
 /**

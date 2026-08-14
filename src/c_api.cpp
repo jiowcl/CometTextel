@@ -116,6 +116,10 @@ void fill_message(ct_message* out, const comettextel::Message& msg)
     out->index = msg.index;
     out->dcs = static_cast<int32_t>(msg.coding);
     out->has_udh = msg.has_udh ? 1 : 0;
+    out->is_concatenated = msg.is_concatenated ? 1 : 0;
+    out->concat_ref = static_cast<int32_t>(msg.concat_ref);
+    out->concat_total = static_cast<int32_t>(msg.concat_total);
+    out->concat_seq = static_cast<int32_t>(msg.concat_seq);
 
     copy_field(out->service_center, sizeof(out->service_center), msg.service_center);
     copy_field(out->peer_address, sizeof(out->peer_address), msg.peer_address);

@@ -35,7 +35,7 @@ Consumer projects must target **Windows x64** so `comettextel.dll` can load.
 CometTextel encodes **one PDU segment** only (no concatenated SMS / UDH on send).  
 Payload caps: GSM 7-bit ≤ 160 septets; 8-bit / UCS-2 ≤ 140 octets.
 
-On receive, if TP-UDHI is set, the UDH is **skipped** (`HasUdh == true`) but multi-part messages are **not** reassembled.
+On receive, if TP-UDHI is set, the UDH is **skipped** (`HasUdh == true`). Concat IEI `0x00` / `0x08` populate `IsConcatenated`, `ConcatRef`, `ConcatTotal`, `ConcatSeq`. Multi-part messages are **not** reassembled.
 
 ### Strings
 
@@ -153,7 +153,7 @@ Code released under the MIT license.
 
 ## TODO
 
-- Concatenated SMS / UDH reassembly APIs  
+- Concatenated SMS encode (split) and reassembly APIs  
 - Optional linux-x64 NuGet RID assets  
 
 ## Donation

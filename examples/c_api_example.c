@@ -18,6 +18,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+/**
+ * @brief Prints usage information.
+ */
 static void print_usage(void)
 {
     fprintf(stderr,
@@ -28,12 +31,24 @@ static void print_usage(void)
             "  comettextel_c_api_example delete <port> <index> [baud]\n");
 }
 
+/**
+ * @brief Prints a failure status and returns a failure code.
+ * @param status The status code.
+ * @param what The what.
+ * @return The failure code.
+ */
 static int fail_status(int status, const char* what)
 {
     fprintf(stderr, "%s failed (%d): %s\n", what, status, ct_status_string(status));
     return 2;
 }
 
+/**
+ * @brief Encodes a submit PDU hex string.
+ * @param argc The number of arguments.
+ * @param argv The arguments.
+ * @return The status code.
+ */
 static int run_pdu(int argc, char** argv)
 {
     const char* destination = NULL;
@@ -67,14 +82,24 @@ static int run_pdu(int argc, char** argv)
         return fail_status(status, "ct_pdu_decode");
     }
 
-    printf("peer=%s text=%s dcs=%d has_udh=%d\n",
+    printf("peer=%s text=%s dcs=%d has_udh=%d concat=%d ref=%d total=%d seq=%d\n",
            msg.peer_address,
            msg.user_data,
            msg.dcs,
-           msg.has_udh);
+           msg.has_udh,
+           msg.is_concatenated,
+           msg.concat_ref,
+           msg.concat_total,
+           msg.concat_seq);
     return 0;
 }
 
+/**
+ * @brief Parses a baud rate from a string.
+ * @param text The text to parse.
+ * @param fallback The fallback baud rate.
+ * @return The baud rate.
+ */
 static uint32_t parse_baud(const char* text, uint32_t fallback)
 {
     unsigned long value = 0;
@@ -91,6 +116,12 @@ static uint32_t parse_baud(const char* text, uint32_t fallback)
     return (uint32_t)value;
 }
 
+/**
+ * @brief Lists stored messages.
+ * @param argc The number of arguments.
+ * @param argv The arguments.
+ * @return The status code.
+ */
 static int run_list(int argc, char** argv)
 {
     const char* port = NULL;
@@ -137,6 +168,12 @@ static int run_list(int argc, char** argv)
     return 0;
 }
 
+/**
+ * @brief Sends a message to a destination.
+ * @param argc The number of arguments.
+ * @param argv The arguments.
+ * @return The status code.
+ */
 static int run_send(int argc, char** argv)
 {
     const char* port = NULL;
@@ -183,6 +220,12 @@ static int run_send(int argc, char** argv)
     return 0;
 }
 
+/**
+ * @brief Deletes a stored message and waits for OK/ERROR.
+ * @param argc The number of arguments.
+ * @param argv The arguments.
+ * @return The status code.
+ */
 static int run_delete(int argc, char** argv)
 {
     const char* port = NULL;
@@ -225,6 +268,12 @@ static int run_delete(int argc, char** argv)
     return 0;
 }
 
+/**
+ * @brief Main function.
+ * @param argc The number of arguments.
+ * @param argv The arguments.
+ * @return The status code.
+ */
 int main(int argc, char** argv)
 {
     if (argc < 2) {

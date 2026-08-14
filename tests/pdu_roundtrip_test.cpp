@@ -299,6 +299,7 @@ void test_classify_response()
 void test_decode_skips_udh_ucs2()
 {
     // SMS-DELIVER, UDHI set, UCS-2 payload "Hi" after a 6-octet concat UDH.
+    // UDH: UDHL=05, IEI=00, IEDL=03, ref=AA, total=02, seq=01
     constexpr std::string_view kPdu =
         "0044049121430008000000000000000A"
         "050003AA0201"
@@ -307,6 +308,10 @@ void test_decode_skips_udh_ucs2()
     comettextel::Message message;
     CHECK(!comettextel::PduCodec::decode(kPdu, message));
     CHECK(message.has_udh);
+    CHECK(message.is_concatenated);
+    CHECK(message.concat_ref == 0xAA);
+    CHECK(message.concat_total == 2);
+    CHECK(message.concat_seq == 1);
     CHECK(message.coding == comettextel::DataCoding::Ucs2);
     CHECK(message.user_data == "Hi");
 }
@@ -321,7 +326,48 @@ void test_decode_skips_udh_eightbit()
     comettextel::Message message;
     CHECK(!comettextel::PduCodec::decode(kPdu, message));
     CHECK(message.has_udh);
+    CHECK(message.is_concatenated);
+    CHECK(message.concat_ref == 0xAA);
+    CHECK(message.concat_total == 2);
+    CHECK(message.concat_seq == 1);
     CHECK(message.coding == comettextel::DataCoding::EightBit);
+    CHECK(message.user_data == "Hi");
+}
+
+void test_decode_concat_16bit_ref()
+{
+    // Same frame as UCS-2 UDH test, but IEI 0x08 / IEDL 0x04 / ref=0x1234 / total=3 / seq=2
+    // UDHL=06, then 08 04 12 34 03 02, payload UCS-2 "Hi"
+    constexpr std::string_view kPdu =
+        "0044049121430008000000000000000B"
+        "06080412340302"
+        "00480069";
+
+    comettextel::Message message;
+    CHECK(!comettextel::PduCodec::decode(kPdu, message));
+    CHECK(message.has_udh);
+    CHECK(message.is_concatenated);
+    CHECK(message.concat_ref == 0x1234);
+    CHECK(message.concat_total == 3);
+    CHECK(message.concat_seq == 2);
+    CHECK(message.user_data == "Hi");
+}
+
+void test_decode_udh_without_concat_ie()
+{
+    // UDHL=03, IEI=FF (unknown), IEDL=01, data=00 — has_udh but not concatenated
+    constexpr std::string_view kPdu =
+        "00440491214300080000000000000008"
+        "03FF0100"
+        "00480069";
+
+    comettextel::Message message;
+    CHECK(!comettextel::PduCodec::decode(kPdu, message));
+    CHECK(message.has_udh);
+    CHECK(!message.is_concatenated);
+    CHECK(message.concat_ref == 0);
+    CHECK(message.concat_total == 0);
+    CHECK(message.concat_seq == 0);
     CHECK(message.user_data == "Hi");
 }
 
@@ -338,6 +384,28 @@ void test_c_api_pdu_roundtrip()
     CHECK(std::string_view{message.peer_address} == "886912345678");
     CHECK(std::string_view{message.user_data} == "Hello");
     CHECK(message.dcs == CT_DCS_UCS2);
+    CHECK(message.is_concatenated == 0);
+#else
+    CHECK(true);
+#endif
+}
+
+void test_c_api_concat_fields()
+{
+#if defined(COMETTEXTEL_HAS_C_API)
+    constexpr char kPdu[] =
+        "0044049121430008000000000000000A"
+        "050003AA0201"
+        "00480069";
+
+    ct_message message{};
+    CHECK(ct_pdu_decode(kPdu, &message) == CT_OK);
+    CHECK(message.has_udh == 1);
+    CHECK(message.is_concatenated == 1);
+    CHECK(message.concat_ref == 0xAA);
+    CHECK(message.concat_total == 2);
+    CHECK(message.concat_seq == 1);
+    CHECK(std::string_view{message.user_data} == "Hi");
 #else
     CHECK(true);
 #endif
@@ -362,7 +430,10 @@ int main()
     test_classify_response();
     test_decode_skips_udh_ucs2();
     test_decode_skips_udh_eightbit();
+    test_decode_concat_16bit_ref();
+    test_decode_udh_without_concat_ie();
     test_c_api_pdu_roundtrip();
+    test_c_api_concat_fields();
 
     if (g_failures != 0) {
         std::cerr << g_failures << " check(s) failed\n";

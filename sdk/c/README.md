@@ -85,8 +85,8 @@ When using the static library, define `COMETTEXTEL_STATIC` before including `c_a
 
 ## Limitations
 
-- Single-segment SMS only (no concat encode / reassembly).
-- On receive, UDH is skipped (`has_udh`); parts are not joined.
+- Single-segment SMS only on **send** (no UDH / multi-part encode).
+- On receive, UDH is skipped (`has_udh`); concat IEI 0x00 / 0x08 fill `is_concatenated` / `concat_*`. Parts are not joined.
 
 ## See also
 

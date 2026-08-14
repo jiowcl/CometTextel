@@ -10,18 +10,60 @@ namespace CometTextel.NET.Core
     /// </summary>
     public sealed class SmsMessage
     {
+        /// <summary>
+        /// Index of the message.
+        /// </summary>
         public int Index { get; init; } = -1;
 
+        /// <summary>
+        /// Data coding scheme of the message.
+        /// </summary>
         public DataCoding Coding { get; init; } = DataCoding.Ucs2;
 
+        /// <summary>
+        /// True when a UDH was present in the message.
+        /// </summary>
         public bool HasUdh { get; init; }
 
+        /// <summary>
+        /// True when a concatenated SMS IE (0x00 / 0x08) was present in the UDH.
+        /// Segments are not reassembled.
+        /// </summary>
+        public bool IsConcatenated { get; init; }
+
+        /// <summary>
+        /// Concatenation reference number (valid when <see cref="IsConcatenated"/>).
+        /// </summary>
+        public int ConcatRef { get; init; }
+
+        /// <summary>
+        /// Total segment count (valid when <see cref="IsConcatenated"/>).
+        /// </summary>
+        public int ConcatTotal { get; init; }
+
+        /// <summary>
+        /// 1-based segment index (valid when <see cref="IsConcatenated"/>).
+        /// </summary>
+        public int ConcatSeq { get; init; }
+
+        /// <summary>
+        /// Service center of the message.
+        /// </summary>
         public string ServiceCenter { get; init; } = string.Empty;
 
+        /// <summary>
+        /// Peer address of the message.
+        /// </summary>
         public string PeerAddress { get; init; } = string.Empty;
 
+        /// <summary>
+        /// Service timestamp of the message.
+        /// </summary>
         public string ServiceTimestamp { get; init; } = string.Empty;
 
+        /// <summary>
+        /// UTF-8 text of the message payload.
+        /// </summary>
         public string UserData { get; init; } = string.Empty;
 
         /// <summary>
@@ -32,6 +74,10 @@ namespace CometTextel.NET.Core
             Index = native.Index,
             Coding = (DataCoding)native.Dcs,
             HasUdh = native.HasUdh != 0,
+            IsConcatenated = native.IsConcatenated != 0,
+            ConcatRef = native.ConcatRef,
+            ConcatTotal = native.ConcatTotal,
+            ConcatSeq = native.ConcatSeq,
             ServiceCenter = NativeMethods.Utf8Z(native.ServiceCenter),
             PeerAddress = NativeMethods.Utf8Z(native.PeerAddress),
             ServiceTimestamp = NativeMethods.Utf8Z(native.ServiceTimestamp),

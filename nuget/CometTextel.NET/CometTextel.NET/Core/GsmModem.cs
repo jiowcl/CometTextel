@@ -10,7 +10,10 @@ namespace CometTextel.NET.Core
     /// </summary>
     public sealed class GsmModem : IDisposable
     {
+        // Handle to the modem instance.
         private IntPtr _handle;
+
+        // True when the modem is disposed.
         private bool _disposed;
 
         /// <summary>
@@ -25,6 +28,9 @@ namespace CometTextel.NET.Core
             }
         }
 
+        /// <summary>
+        /// Finalizer for the GsmModem.
+        /// </summary>
         ~GsmModem()
         {
             Dispose(disposing: false);
@@ -33,7 +39,10 @@ namespace CometTextel.NET.Core
         /// <summary>
         /// Opens the port and initializes PDU mode.
         /// </summary>
-        public void Open(string port, uint baudRate = 115200)
+        /// <param name="port">The port to open.</param>
+        public void Open(
+            string port, 
+            uint baudRate = 115200)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
             ArgumentException.ThrowIfNullOrEmpty(port);
@@ -43,6 +52,11 @@ namespace CometTextel.NET.Core
         /// <summary>
         /// Sends one SMS and waits for the modem final result.
         /// </summary>
+        /// <param name="destination">The destination address.</param>
+        /// <param name="text">The message text.</param>
+        /// <param name="serviceCenter">The service center address.</param>
+        /// <param name="coding">The data coding scheme.</param>
+        /// <param name="timeoutMs">The timeout in milliseconds.</param>
         public void Send(
             string destination,
             string text,
@@ -66,7 +80,12 @@ namespace CometTextel.NET.Core
         /// <summary>
         /// Lists stored messages.
         /// </summary>
-        public IReadOnlyList<SmsMessage> List(int maxCount = 64, int timeoutMs = 8000)
+        /// <param name="maxCount">The maximum number of messages to list.</param>
+        /// <param name="timeoutMs">The timeout in milliseconds.</param>
+        /// <returns>The list of messages.</returns>
+        public IReadOnlyList<SmsMessage> List(
+            int maxCount = 64, 
+            int timeoutMs = 8000)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxCount);
@@ -87,20 +106,32 @@ namespace CometTextel.NET.Core
         /// <summary>
         /// Deletes one stored message by index.
         /// </summary>
-        public void Delete(int index, int timeoutMs = 5000)
+        /// <param name="index">The index of the message to delete.</param>
+        /// <param name="timeoutMs">The timeout in milliseconds.</param>
+        public void Delete(
+            int index, 
+            int timeoutMs = 5000)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
             Pdu.EnsureOk(NativeMethods.ct_modem_delete(_handle, index, timeoutMs));
         }
 
         /// <inheritdoc />
+        /// <summary>
+        /// Disposes of the GsmModem.
+        /// </summary>
         public void Dispose()
         {
             Dispose(disposing: true);
             GC.SuppressFinalize(this);
         }
 
-        private void Dispose(bool disposing)
+        /// <summary>
+        /// Disposes of the GsmModem.
+        /// </summary>
+        /// <param name="disposing">True if the GsmModem is being disposed.</param>
+        private void Dispose(
+            bool disposing)
         {
             _ = disposing;
 

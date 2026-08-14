@@ -11,6 +11,7 @@ namespace CometTextel.NET.Core.Native
     /// </summary>
     internal static class NativeMethods
     {
+        // DLL name for the CometTextel library.
         internal const string DllName = "comettextel";
 
         /// <summary>
@@ -34,6 +35,11 @@ namespace CometTextel.NET.Core.Native
 
             [MarshalAs(UnmanagedType.ByValArray, SizeConst = 512)]
             public byte[] UserData;
+
+            public int IsConcatenated;
+            public int ConcatRef;
+            public int ConcatTotal;
+            public int ConcatSeq;
         }
 
         /// <summary>

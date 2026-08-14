@@ -111,7 +111,9 @@ public:
      *
      * @note User-Data Header (UDH): when TP-UDHI is set, the header octets are
      *       skipped so @ref Message::user_data contains the payload text only.
-     *       Concatenated segments are still not reassembled.
+     *       Concatenated SMS IEI 0x00 (8-bit ref) and 0x08 (16-bit ref) are
+     *       parsed into @ref Message::is_concatenated / concat_* fields.
+     *       Segments are still not reassembled.
      */
     [[nodiscard]] static std::error_code decode(std::string_view pdu_hex, Message& message);
 };

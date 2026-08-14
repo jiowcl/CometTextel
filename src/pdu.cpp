@@ -61,6 +61,59 @@ namespace {
 }
 
 /**
+ * @brief Parse concatenated-SMS IE from a UDH (UDHL + body).
+ *
+ * Recognizes IEI 0x00 (8-bit reference, IEDL=3) and IEI 0x08 (16-bit reference, IEDL=4).
+ * The first matching IE wins. Invalid lengths stop the scan without failing decode.
+ *
+ * @param udh Span starting at UDHL (length = UDHL + 1).
+ * @param message Message fields to update.
+ */
+void parse_concat_from_udh(std::span<const std::uint8_t> udh, Message& message)
+{
+    if (udh.empty()) {
+        return;
+    }
+
+    const std::size_t udhl = udh[0];
+    const std::size_t end = 1U + udhl;
+
+    if (udh.size() < end) {
+        return;
+    }
+
+    std::size_t i = 1;
+
+    while (i + 2U <= end) {
+        const std::uint8_t iei = udh[i++];
+        const std::uint8_t iedl = udh[i++];
+
+        if (i + static_cast<std::size_t>(iedl) > end) {
+            break;
+        }
+
+        if (iei == 0x00U && iedl == 0x03U) {
+            message.is_concatenated = true;
+            message.concat_ref = udh[i];
+            message.concat_total = udh[i + 1U];
+            message.concat_seq = udh[i + 2U];
+            return;
+        }
+
+        if (iei == 0x08U && iedl == 0x04U) {
+            message.is_concatenated = true;
+            message.concat_ref = static_cast<std::uint16_t>(
+                (static_cast<std::uint16_t>(udh[i]) << 8) | udh[i + 1U]);
+            message.concat_total = udh[i + 2U];
+            message.concat_seq = udh[i + 3U];
+            return;
+        }
+
+        i += iedl;
+    }
+}
+
+/**
  * @brief Decode the next UTF-8 character.
  * @param text The text to decode.
  * @param index The index of the current character.
@@ -646,6 +699,8 @@ std::error_code PduCodec::decode(std::string_view pdu_hex, Message& message)
         if (ud.size() < udh_octets) {
             return make_error_code(Errc::DecodeFailure);
         }
+
+        parse_concat_from_udh(ud.first(udh_octets), message);
     }
 
     switch (message.coding) {

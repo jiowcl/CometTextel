@@ -8,12 +8,22 @@ namespace CometTextel.NET.Core
     /// </summary>
     public sealed class CometTextelException : Exception
     {
-        public CometTextelException(int status, string message)
+        /// <summary>
+        /// Creates a new CometTextelException.
+        /// </summary>
+        /// <param name="status">The status code.</param>
+        /// <param name="message">The message.</param>
+        public CometTextelException(
+            int status, 
+            string message)
             : base(message)
         {
             Status = status;
         }
 
+        /// <summary>
+        /// The status code.
+        /// </summary>
         public int Status { get; }
     }
 }

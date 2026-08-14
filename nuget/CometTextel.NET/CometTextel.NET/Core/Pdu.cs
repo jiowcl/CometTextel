@@ -15,6 +15,11 @@ namespace CometTextel.NET.Core
         /// <summary>
         /// Encode a PDU submit message.
         /// </summary>
+        /// <param name="destination">The destination address.</param>
+        /// <param name="text">The message text.</param>
+        /// <param name="serviceCenter">The service center address.</param>
+        /// <param name="coding">The data coding scheme.</param>
+        /// <returns>The encoded PDU hex string.</returns>
         public static string EncodeSubmit(
             string destination,
             string text,
@@ -36,6 +41,7 @@ namespace CometTextel.NET.Core
             EnsureOk(status);
 
             int end = Array.IndexOf(buffer, (byte)0);
+
             if (end < 0)
             {
                 end = buffer.Length;
@@ -47,7 +53,10 @@ namespace CometTextel.NET.Core
         /// <summary>
         /// Decode a PDU message.
         /// </summary>
-        public static SmsMessage Decode(string pduHex)
+        /// <param name="pduHex">The PDU hex string.</param>
+        /// <returns>The decoded PDU message.</returns>
+        public static SmsMessage Decode(
+            string pduHex)
         {
             ArgumentException.ThrowIfNullOrEmpty(pduHex);
             int status = NativeMethods.ct_pdu_decode(pduHex, out var native);
@@ -58,7 +67,10 @@ namespace CometTextel.NET.Core
         /// <summary>
         /// Throws <see cref="CometTextelException"/> unless <paramref name="status"/> is OK.
         /// </summary>
-        internal static void EnsureOk(int status)
+        /// <param name="status">The status code.</param>
+        /// <exception cref="CometTextelException">Thrown when the status code is not OK.</exception>
+        internal static void EnsureOk(
+            int status)
         {
             if (status == Enums.Ok)
             {

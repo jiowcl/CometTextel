@@ -27,6 +27,27 @@ public sealed class PduSmokeTests
         Assert.Equal(text, decoded.UserData);
         Assert.Equal(DataCoding.Ucs2, decoded.Coding);
         Assert.False(decoded.HasUdh);
+        Assert.False(decoded.IsConcatenated);
+    }
+
+    [Fact]
+    public void Decode_ConcatUdh_8BitRef_ExposesFields()
+    {
+        // Same fixture as C++ test_decode_skips_udh_ucs2
+        const string pdu =
+            "0044049121430008000000000000000A" +
+            "050003AA0201" +
+            "00480069";
+
+        SmsMessage decoded = Pdu.Decode(pdu);
+
+        Assert.True(decoded.HasUdh);
+        Assert.True(decoded.IsConcatenated);
+        Assert.Equal(0xAA, decoded.ConcatRef);
+        Assert.Equal(2, decoded.ConcatTotal);
+        Assert.Equal(1, decoded.ConcatSeq);
+        Assert.Equal("Hi", decoded.UserData);
+        Assert.Equal(DataCoding.Ucs2, decoded.Coding);
     }
 
     [Fact]
