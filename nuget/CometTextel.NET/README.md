@@ -30,10 +30,12 @@ Consumer projects must target **Windows x64** so `comettextel.dll` can load.
 
 ## Important notes
 
-### Single-segment SMS
+### Concatenated SMS
 
-CometTextel encodes **one PDU segment** only (no concatenated SMS / UDH on send).  
-Payload caps: GSM 7-bit ≤ 160 septets; 8-bit / UCS-2 ≤ 140 octets.
+`Pdu.EncodeSubmit` is **single-segment** (fails if the payload is too long).  
+`Pdu.EncodeSubmitSegments` and `GsmModem.Send` **auto-split** with concat UDH (IEI `0x00`, ≤ 255 parts).
+
+Payload caps: single GSM 7-bit ≤ 160 / 8-bit·UCS-2 ≤ 140; concat GSM 7-bit ≤ 153 / 8-bit·UCS-2 ≤ 134.
 
 On receive, if TP-UDHI is set, the UDH is **skipped** (`HasUdh == true`). Concat IEI `0x00` / `0x08` populate `IsConcatenated`, `ConcatRef`, `ConcatTotal`, `ConcatSeq`. Multi-part messages are **not** reassembled.
 
@@ -139,7 +141,7 @@ dotnet pack CometTextel.NET\CometTextel.NET.csproj -c Release -p:Platform=x64 -o
 | Area | Highlights |
 |------|------------|
 | Modem | `GsmModem.Open`, `Send`, `List`, `Delete`, `Dispose` |
-| PDU | `Pdu.EncodeSubmit`, `Pdu.Decode` |
+| PDU | `Pdu.EncodeSubmit`, `Pdu.EncodeSubmitSegments`, `Pdu.Decode` |
 | Types | `SmsMessage`, `DataCoding`, `CometTextelException` |
 
 Namespace: **`CometTextel.NET.Core`**.
@@ -153,7 +155,7 @@ Code released under the MIT license.
 
 ## TODO
 
-- Concatenated SMS encode (split) and reassembly APIs  
+- Concatenated SMS reassembly APIs  
 - Optional linux-x64 NuGet RID assets  
 
 ## Donation

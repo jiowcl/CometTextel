@@ -57,11 +57,13 @@ public:
     [[nodiscard]] std::error_code initialize();
 
     /**
-     * @brief Submits one SMS in PDU mode (@c AT+CMGS) and waits for the final result.
+     * @brief Submits an SMS in PDU mode (@c AT+CMGS) and waits for the final result.
      * @param message Message to send.
-     * @param bytes_written Optional number of PDU bytes written after the prompt.
-     * @param timeout Maximum time to wait for the final OK/ERROR after Ctrl-Z.
+     * @param bytes_written Optional number of PDU bytes written after the prompt(s).
+     * @param timeout Maximum time to wait for OK/ERROR after Ctrl-Z (per segment).
      * @return Empty error_code on success.
+     *
+     * @note Long payloads are split with concat UDH and sent as multiple @c AT+CMGS.
      */
     [[nodiscard]] std::error_code send_message(
         const Message& message,
@@ -170,6 +172,18 @@ private:
      * @return Empty error_code on success.
      */
     [[nodiscard]] std::error_code expect_prompt(std::chrono::milliseconds timeout);
+
+    /**
+     * @brief Sends one already-encoded PDU hex string (@c AT+CMGS).
+     * @param pdu_hex Hex TPDU (no Ctrl-Z); Ctrl-Z is appended.
+     * @param bytes_written Optional bytes written after the prompt.
+     * @param timeout Wait for OK/ERROR after Ctrl-Z.
+     * @return Empty error_code on success.
+     */
+    [[nodiscard]] std::error_code send_encoded_pdu(
+        std::string pdu_hex,
+        std::size_t* bytes_written,
+        std::chrono::milliseconds timeout);
 };
 
 } // namespace comettextel

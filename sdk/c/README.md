@@ -73,7 +73,7 @@ Examples: Windows `COM3`, Linux `/dev/ttyUSB0`. The modem must speak AT commands
 |------|-----------|
 | Status | `ct_status_string` |
 | Modem | `ct_modem_create`, `ct_modem_destroy`, `ct_modem_open`, `ct_modem_send`, `ct_modem_list`, `ct_modem_delete` |
-| PDU | `ct_pdu_encode_submit`, `ct_pdu_decode` |
+| PDU | `ct_pdu_encode_submit`, `ct_pdu_encode_submit_segments`, `ct_pdu_decode` |
 
 All text fields are **UTF-8**. See `include/comettextel/c_api.h` for details.
 
@@ -85,7 +85,7 @@ When using the static library, define `COMETTEXTEL_STATIC` before including `c_a
 
 ## Limitations
 
-- Single-segment SMS only on **send** (no UDH / multi-part encode).
+- `ct_pdu_encode_submit` is single-segment; `ct_pdu_encode_submit_segments` and `ct_modem_send` auto-split with concat UDH (IEI 0x00).
 - On receive, UDH is skipped (`has_udh`); concat IEI 0x00 / 0x08 fill `is_concatenated` / `concat_*`. Parts are not joined.
 
 ## See also

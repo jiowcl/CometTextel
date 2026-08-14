@@ -179,12 +179,13 @@ Requires a GSM modem that speaks AT commands in **PDU mode**.
 
 ## Limitations  
 
-- **Send is still single-segment** — encode does not create UDH / multi-part PDUs.  
+- **Send auto-splits** long text with concatenated SMS UDH (`PduCodec::encode_segments` / modem send). `PduCodec::encode` remains single-segment.  
 - **Receive with UDH**: header octets are skipped (`has_udh`); concat IEI `0x00` / `0x08` fill `is_concatenated` / `concat_*`. Parts are not joined.  
-- Keep payloads within one segment:  
+- Keep single-segment payloads within:  
   - GSM 7-bit ≤ 160 characters (septets)  
   - 8-bit / UCS-2 ≤ 140 bytes  
-- Longer input fails encode with `EncodeFailure` instead of silent truncation.  
+- Concat per-segment caps: GSM 7-bit ≤ 153 septets; 8-bit / UCS-2 ≤ 134 octets.  
+- Over-limit single `encode` fails with `EncodeFailure` instead of silent truncation.  
 
 ## 7. Try the bundled examples  
 

@@ -371,6 +371,100 @@ void test_decode_udh_without_concat_ie()
     CHECK(message.user_data == "Hi");
 }
 
+void test_encode_segments_matches_encode_when_short()
+{
+    comettextel::Message message;
+    message.service_center = "886932000000";
+    message.peer_address = "886912345678";
+    message.coding = comettextel::DataCoding::Ucs2;
+    message.user_data = "Hello";
+
+    std::string single;
+    CHECK(!comettextel::PduCodec::encode(message, single));
+
+    std::vector<std::string> parts;
+    CHECK(!comettextel::PduCodec::encode_segments(message, parts));
+    CHECK(parts.size() == 1);
+    CHECK(parts[0] == single);
+}
+
+void test_encode_segments_gsm7_concat()
+{
+    comettextel::Message message;
+    message.service_center = "886932000000";
+    message.peer_address = "886912345678";
+    message.coding = comettextel::DataCoding::Gsm7Bit;
+    message.user_data.assign(161, 'A');
+    message.concat_ref = 0xAA;
+
+    std::vector<std::string> parts;
+    CHECK(!comettextel::PduCodec::encode_segments(message, parts));
+    CHECK(parts.size() == 2);
+
+    std::string joined;
+    for (std::size_t i = 0; i < parts.size(); ++i) {
+        comettextel::Message decoded;
+        CHECK(!comettextel::PduCodec::decode(parts[i], decoded));
+        CHECK(decoded.has_udh);
+        CHECK(decoded.is_concatenated);
+        CHECK(decoded.concat_ref == 0xAA);
+        CHECK(decoded.concat_total == 2);
+        CHECK(decoded.concat_seq == static_cast<std::uint8_t>(i + 1));
+        CHECK(decoded.peer_address == message.peer_address);
+        joined += decoded.user_data;
+    }
+    CHECK(joined == message.user_data);
+}
+
+void test_encode_segments_ucs2_concat()
+{
+    comettextel::Message message;
+    message.service_center = "886932000000";
+    message.peer_address = "886912345678";
+    message.coding = comettextel::DataCoding::Ucs2;
+    message.user_data.assign(71, 'B');
+    message.concat_ref = 0x12;
+
+    std::vector<std::string> parts;
+    CHECK(!comettextel::PduCodec::encode_segments(message, parts));
+    CHECK(parts.size() == 2);
+
+    std::string joined;
+    for (std::size_t i = 0; i < parts.size(); ++i) {
+        comettextel::Message decoded;
+        CHECK(!comettextel::PduCodec::decode(parts[i], decoded));
+        CHECK(decoded.is_concatenated);
+        CHECK(decoded.concat_ref == 0x12);
+        CHECK(decoded.concat_total == 2);
+        CHECK(decoded.concat_seq == static_cast<std::uint8_t>(i + 1));
+        joined += decoded.user_data;
+    }
+    CHECK(joined == message.user_data);
+}
+
+void test_encode_segments_eightbit_concat()
+{
+    comettextel::Message message;
+    message.service_center = "886932000000";
+    message.peer_address = "886912345678";
+    message.coding = comettextel::DataCoding::EightBit;
+    message.user_data.assign(141, '\x01');
+    message.concat_ref = 0x03;
+
+    std::vector<std::string> parts;
+    CHECK(!comettextel::PduCodec::encode_segments(message, parts));
+    CHECK(parts.size() == 2);
+
+    std::string joined;
+    for (const auto& hex : parts) {
+        comettextel::Message decoded;
+        CHECK(!comettextel::PduCodec::decode(hex, decoded));
+        CHECK(decoded.is_concatenated);
+        joined += decoded.user_data;
+    }
+    CHECK(joined == message.user_data);
+}
+
 void test_c_api_pdu_roundtrip()
 {
 #if defined(COMETTEXTEL_HAS_C_API)
@@ -411,6 +505,43 @@ void test_c_api_concat_fields()
 #endif
 }
 
+void test_c_api_encode_segments()
+{
+#if defined(COMETTEXTEL_HAS_C_API)
+    std::string text(71, 'B');
+    char hex[8192]{};
+    int count = 0;
+    CHECK(ct_pdu_encode_submit_segments("886932000000", "886912345678", text.c_str(), CT_DCS_UCS2,
+                                        hex, sizeof(hex), &count) == CT_OK);
+    CHECK(count == 2);
+
+    std::string joined;
+    const char* cursor = hex;
+    int seen = 0;
+    while (*cursor != '\0') {
+        const char* nl = std::strchr(cursor, '\n');
+        std::string part = nl ? std::string(cursor, nl) : std::string(cursor);
+        if (nl) {
+            cursor = nl + 1;
+        } else {
+            cursor += part.size();
+        }
+
+        ct_message message{};
+        CHECK(ct_pdu_decode(part.c_str(), &message) == CT_OK);
+        CHECK(message.is_concatenated == 1);
+        CHECK(message.concat_total == 2);
+        CHECK(message.concat_seq == seen + 1);
+        joined += message.user_data;
+        ++seen;
+    }
+    CHECK(seen == 2);
+    CHECK(joined == text);
+#else
+    CHECK(true);
+#endif
+}
+
 } // namespace
 
 int main()
@@ -432,8 +563,13 @@ int main()
     test_decode_skips_udh_eightbit();
     test_decode_concat_16bit_ref();
     test_decode_udh_without_concat_ie();
+    test_encode_segments_matches_encode_when_short();
+    test_encode_segments_gsm7_concat();
+    test_encode_segments_ucs2_concat();
+    test_encode_segments_eightbit_concat();
     test_c_api_pdu_roundtrip();
     test_c_api_concat_fields();
+    test_c_api_encode_segments();
 
     if (g_failures != 0) {
         std::cerr << g_failures << " check(s) failed\n";

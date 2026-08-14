@@ -160,6 +160,21 @@ CT_API int ct_pdu_encode_submit(const char* smsc,
                                 size_t out_hex_cap);
 
 /**
+ * @brief Encodes one or more submit PDUs (auto-splits with concat UDH when needed).
+ * @param out_hex Receives newline-separated hex strings, NUL-terminated.
+ * @param out_hex_cap Capacity of @p out_hex including the trailing NUL.
+ * @param out_count Receives the number of segments (1 or more).
+ * @return CT_OK on success.
+ */
+CT_API int ct_pdu_encode_submit_segments(const char* smsc,
+                                         const char* destination,
+                                         const char* text,
+                                         int dcs,
+                                         char* out_hex,
+                                         size_t out_hex_cap,
+                                         int* out_count);
+
+/**
  * @brief Decodes a PDU hex string into @p out (no modem I/O).
  * @param pdu_hex The PDU hex string.
  * @param out The destination message struct.

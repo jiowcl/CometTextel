@@ -77,4 +77,44 @@ public sealed class PduSmokeTests
         Assert.ThrowsAny<ArgumentException>(() =>
             Pdu.EncodeSubmit("", "x", "886932000000", DataCoding.Ucs2));
     }
+
+    [Fact]
+    public void EncodeSubmitSegments_Short_MatchesEncodeSubmit()
+    {
+        const string destination = "886912345678";
+        const string text = "Hello";
+        const string smsc = "886932000000";
+
+        string single = Pdu.EncodeSubmit(destination, text, smsc, DataCoding.Ucs2);
+        string[] parts = Pdu.EncodeSubmitSegments(destination, text, smsc, DataCoding.Ucs2);
+
+        Assert.Single(parts);
+        Assert.Equal(single, parts[0]);
+        Assert.False(Pdu.Decode(parts[0]).IsConcatenated);
+    }
+
+    [Fact]
+    public void EncodeSubmitSegments_Ucs2_LongText_SplitsAndRoundTrips()
+    {
+        const string destination = "886912345678";
+        string text = new string('B', 71);
+        const string smsc = "886932000000";
+
+        string[] parts = Pdu.EncodeSubmitSegments(destination, text, smsc, DataCoding.Ucs2);
+
+        Assert.Equal(2, parts.Length);
+
+        string joined = string.Empty;
+        for (int i = 0; i < parts.Length; i++)
+        {
+            SmsMessage decoded = Pdu.Decode(parts[i]);
+            Assert.True(decoded.IsConcatenated);
+            Assert.Equal(2, decoded.ConcatTotal);
+            Assert.Equal(i + 1, decoded.ConcatSeq);
+            Assert.Equal(destination, decoded.PeerAddress);
+            joined += decoded.UserData;
+        }
+
+        Assert.Equal(text, joined);
+    }
 }

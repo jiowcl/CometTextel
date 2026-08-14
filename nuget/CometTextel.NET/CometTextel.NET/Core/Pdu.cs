@@ -51,6 +51,59 @@ namespace CometTextel.NET.Core
         }
 
         /// <summary>
+        /// Encode one or more submit PDUs. Longer text is split with concatenated-SMS UDH.
+        /// </summary>
+        /// <param name="destination">The destination address.</param>
+        /// <param name="text">The message text.</param>
+        /// <param name="serviceCenter">The service center address.</param>
+        /// <param name="coding">The data coding scheme.</param>
+        /// <returns>The encoded PDU hex strings.</returns>
+        public static string[] EncodeSubmitSegments(
+            string destination,
+            string text,
+            string? serviceCenter = null,
+            DataCoding coding = DataCoding.Ucs2)
+        {
+            ArgumentException.ThrowIfNullOrEmpty(destination);
+            ArgumentNullException.ThrowIfNull(text);
+
+            byte[] buffer = new byte[131072];
+            int status = NativeMethods.ct_pdu_encode_submit_segments(
+                serviceCenter ?? string.Empty,
+                destination,
+                text,
+                (int)coding,
+                buffer,
+                (UIntPtr)buffer.Length,
+                out int count);
+
+            EnsureOk(status);
+
+            int end = Array.IndexOf(buffer, (byte)0);
+            
+            if (end < 0)
+            {
+                end = buffer.Length;
+            }
+
+            string joined = Encoding.ASCII.GetString(buffer, 0, end);
+
+            if (string.IsNullOrEmpty(joined))
+            {
+                return [];
+            }
+
+            string[] parts = joined.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+
+            if (parts.Length != count)
+            {
+                throw new CometTextelException(Enums.ErrEncode, "segment count mismatch");
+            }
+
+            return parts;
+        }
+
+        /// <summary>
         /// Decode a PDU message.
         /// </summary>
         /// <param name="pduHex">The PDU hex string.</param>

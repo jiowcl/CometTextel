@@ -50,7 +50,8 @@ namespace CometTextel.NET.Core
         }
 
         /// <summary>
-        /// Sends one SMS and waits for the modem final result.
+        /// Sends an SMS and waits for the modem final result.
+        /// Long payloads are split and sent as concatenated segments.
         /// </summary>
         /// <param name="destination">The destination address.</param>
         /// <param name="text">The message text.</param>

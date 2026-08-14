@@ -93,15 +93,32 @@ public:
     [[nodiscard]] static std::string serialize_digits(std::string_view inverted);
 
     /**
-     * @brief Encodes a submit-PDU hex string for @c AT+CMGS.
+     * @brief Encodes a single submit-PDU hex string for @c AT+CMGS.
      * @param message Message parameters (SMSC, destination, coding, text).
      * @param pdu_hex Receives the hex PDU (without the trailing Ctrl-Z).
      * @return Empty error_code on success.
      *
-     * @note Single-segment only (no UDH / concatenated SMS). Length limits:
+     * @note Single-segment only (no UDH). Length limits:
      *       GSM 7-bit ≤ 160 septets; 8-bit / UCS-2 ≤ 140 octets.
+     *       Use @ref encode_segments to auto-split longer payloads.
      */
     [[nodiscard]] static std::error_code encode(const Message& message, std::string& pdu_hex);
+
+    /**
+     * @brief Encodes one or more submit-PDU hex strings, splitting with concat UDH
+     *        (IEI 0x00, 8-bit reference) when the payload exceeds a single segment.
+     * @param message Message parameters (SMSC, destination, coding, text).
+     * @param pdu_hexes Receives one hex PDU per segment (without Ctrl-Z).
+     * @return Empty error_code on success.
+     *
+     * @note Fits in one segment → same as @ref encode (no UDH).
+     *       Longer text → every segment carries a concat UDH. At most 255 parts.
+     *       @ref Message::concat_ref is used when non-zero (low 8 bits); otherwise
+     *       a checksum of the payload is used.
+     *       Per-segment payload with UDH: GSM 7-bit ≤ 153 septets; 8-bit / UCS-2 ≤ 134 octets.
+     */
+    [[nodiscard]] static std::error_code encode_segments(const Message& message,
+                                                         std::vector<std::string>& pdu_hexes);
 
     /**
      * @brief Decodes a PDU hex string into @ref Message fields.

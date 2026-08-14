@@ -54,9 +54,10 @@ static int run_pdu(int argc, char** argv)
     const char* destination = NULL;
     const char* text = NULL;
     const char* smsc = "";
-    char hex[1024];
-    ct_message msg;
+    char hex[65536];
+    int count = 0;
     int status = 0;
+    char* cursor = NULL;
 
     if (argc < 4) {
         print_usage();
@@ -69,28 +70,49 @@ static int run_pdu(int argc, char** argv)
         smsc = argv[4];
     }
 
-    status = ct_pdu_encode_submit(smsc, destination, text, CT_DCS_UCS2, hex, sizeof(hex));
+    status = ct_pdu_encode_submit_segments(smsc, destination, text, CT_DCS_UCS2, hex, sizeof(hex),
+                                           &count);
     if (status != CT_OK) {
-        return fail_status(status, "ct_pdu_encode_submit");
+        return fail_status(status, "ct_pdu_encode_submit_segments");
     }
 
-    printf("%s\n", hex);
+    cursor = hex;
+    while (*cursor != '\0') {
+        char* nl = strchr(cursor, '\n');
+        ct_message msg;
+        char saved = 0;
 
-    memset(&msg, 0, sizeof(msg));
-    status = ct_pdu_decode(hex, &msg);
-    if (status != CT_OK) {
-        return fail_status(status, "ct_pdu_decode");
+        if (nl != NULL) {
+            saved = *nl;
+            *nl = '\0';
+        }
+
+        printf("%s\n", cursor);
+
+        memset(&msg, 0, sizeof(msg));
+        status = ct_pdu_decode(cursor, &msg);
+        if (status != CT_OK) {
+            return fail_status(status, "ct_pdu_decode");
+        }
+
+        printf("peer=%s text=%s dcs=%d has_udh=%d concat=%d ref=%d total=%d seq=%d\n",
+               msg.peer_address,
+               msg.user_data,
+               msg.dcs,
+               msg.has_udh,
+               msg.is_concatenated,
+               msg.concat_ref,
+               msg.concat_total,
+               msg.concat_seq);
+
+        if (nl == NULL) {
+            break;
+        }
+        *nl = saved;
+        cursor = nl + 1;
     }
 
-    printf("peer=%s text=%s dcs=%d has_udh=%d concat=%d ref=%d total=%d seq=%d\n",
-           msg.peer_address,
-           msg.user_data,
-           msg.dcs,
-           msg.has_udh,
-           msg.is_concatenated,
-           msg.concat_ref,
-           msg.concat_total,
-           msg.concat_seq);
+    printf("segments=%d\n", count);
     return 0;
 }
 

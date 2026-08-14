@@ -20,25 +20,63 @@ namespace CometTextel.NET.Core.Native
         [StructLayout(LayoutKind.Sequential)]
         public struct CtMessage
         {
+            /// <summary>
+            /// Index of the message.
+            /// </summary>
             public int Index;
+
+            /// <summary>
+            /// Data coding scheme.
+            /// </summary>
             public int Dcs;
+
+            /// <summary>
+            /// True when a UDH was found in the message.
+            /// </summary>
             public int HasUdh;
 
+            /// <summary>
+            /// Service center.
+            /// </summary>
             [MarshalAs(UnmanagedType.ByValArray, SizeConst = 32)]
             public byte[] ServiceCenter;
 
+            /// <summary>
+            /// Peer address.
+            /// </summary>
             [MarshalAs(UnmanagedType.ByValArray, SizeConst = 32)]
             public byte[] PeerAddress;
 
+            /// <summary>
+            /// Service timestamp.
+            /// </summary>
             [MarshalAs(UnmanagedType.ByValArray, SizeConst = 32)]
             public byte[] ServiceTimestamp;
 
+            /// <summary>
+            /// UTF-8 user data.
+            /// </summary>
             [MarshalAs(UnmanagedType.ByValArray, SizeConst = 512)]
             public byte[] UserData;
 
+            /// <summary>
+            /// True when a concatenated SMS IE was found in the UDH.
+            /// </summary>
             public int IsConcatenated;
+
+            /// <summary>
+            /// Concatenation reference number (valid when <see cref="IsConcatenated"/> != 0).
+            /// </summary>
             public int ConcatRef;
+
+            /// <summary>
+            /// Total segment count (valid when <see cref="IsConcatenated"/> != 0).
+            /// </summary>
             public int ConcatTotal;
+
+            /// <summary>
+            /// 1-based segment index (valid when <see cref="IsConcatenated"/> != 0).
+            /// </summary>
             public int ConcatSeq;
         }
 
@@ -140,6 +178,19 @@ namespace CometTextel.NET.Core.Native
             int dcs,
             byte[] outHex,
             UIntPtr outHexCap);
+
+        /// <summary>
+        /// Encodes one or more submit PDUs (newline-separated hex). Auto-splits with concat UDH.
+        /// </summary>
+        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int ct_pdu_encode_submit_segments(
+            [MarshalAs(UnmanagedType.LPUTF8Str)] string? smsc,
+            [MarshalAs(UnmanagedType.LPUTF8Str)] string destination,
+            [MarshalAs(UnmanagedType.LPUTF8Str)] string text,
+            int dcs,
+            byte[] outHex,
+            UIntPtr outHexCap,
+            out int outCount);
 
         /// <summary>
         /// Decodes a PDU hex string into a <c>ct_message</c>.

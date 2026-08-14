@@ -175,12 +175,31 @@ std::error_code GsmModem::send_message(const Message& message,
         return make_error_code(Errc::NotOpen);
     }
 
-    std::string pdu_hex;
-
-    if (auto ec = PduCodec::encode(message, pdu_hex); ec) {
+    std::vector<std::string> pdus;
+    if (auto ec = PduCodec::encode_segments(message, pdus); ec) {
         return ec;
     }
 
+    std::size_t total_written = 0;
+    for (std::string& pdu_hex : pdus) {
+        std::size_t written = 0;
+        if (auto ec = send_encoded_pdu(std::move(pdu_hex), &written, timeout); ec) {
+            return ec;
+        }
+        total_written += written;
+    }
+
+    if (bytes_written) {
+        *bytes_written = total_written;
+    }
+
+    return {};
+}
+
+std::error_code GsmModem::send_encoded_pdu(std::string pdu_hex,
+                                           std::size_t* bytes_written,
+                                           std::chrono::milliseconds timeout)
+{
     pdu_hex.push_back(static_cast<char>(0x1A)); // Ctrl-Z
 
     std::uint8_t smsc_len = 0;

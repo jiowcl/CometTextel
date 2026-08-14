@@ -16,6 +16,7 @@
 #include <cstring>
 #include <new>
 #include <string>
+#include <vector>
 
 struct ct_modem {
     comettextel::GsmModem impl;
@@ -345,6 +346,62 @@ int ct_pdu_encode_submit(const char* smsc,
 
     std::memcpy(out_hex, hex.c_str(), hex.size() + 1);
 
+    return CT_OK;
+}
+
+/**
+ * @brief Encode one or more submit PDUs (newline-separated hex). Auto-splits with concat UDH.
+ * @param smsc The service center address.
+ * @param destination The destination address.
+ * @param text The message text.
+ * @param dcs The data coding scheme.
+ * @param out_hex The destination PDU hex string.
+ * @param out_hex_cap The destination PDU hex string capacity.
+ * @param out_count The number of PDU hex strings encoded.
+ * @return The C API status code.
+ */
+int ct_pdu_encode_submit_segments(const char* smsc,
+                                  const char* destination,
+                                  const char* text,
+                                  int dcs,
+                                  char* out_hex,
+                                  size_t out_hex_cap,
+                                  int* out_count)
+{
+    if (destination == nullptr || text == nullptr || out_hex == nullptr || out_hex_cap == 0 ||
+        out_count == nullptr) {
+        return CT_ERR_INVALID_ARGUMENT;
+    }
+
+    *out_count = 0;
+
+    comettextel::Message message;
+    message.service_center = smsc != nullptr ? smsc : "";
+    message.peer_address = destination;
+    message.user_data = text;
+    message.coding = map_dcs(dcs);
+
+    std::vector<std::string> hexes;
+    
+    if (const auto ec = comettextel::PduCodec::encode_segments(message, hexes); ec) {
+        return map_error(ec);
+    }
+
+    std::string joined;
+
+    for (std::size_t i = 0; i < hexes.size(); ++i) {
+        if (i != 0) {
+            joined.push_back('\n');
+        }
+        joined += hexes[i];
+    }
+
+    if (joined.size() + 1 > out_hex_cap) {
+        return CT_ERR_ENCODE;
+    }
+
+    std::memcpy(out_hex, joined.c_str(), joined.size() + 1);
+    *out_count = static_cast<int>(hexes.size());
     return CT_OK;
 }
 
