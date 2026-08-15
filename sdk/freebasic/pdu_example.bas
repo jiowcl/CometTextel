@@ -76,7 +76,7 @@ End Function
 Function RunSelfCheck() As Integer
 	Dim As Long status = 0
 	Dim As CtMessage msg
-	Dim As String hex
+	Dim As String hexOne
 	Dim As WString * 64 chineseW
 	Dim As String chinese
 	Dim As Long count = 0
@@ -160,14 +160,14 @@ Function RunSelfCheck() As Integer
 	Print "ok"
 
 	Print "-- self-check single-segment EncodeSubmit --"
-	hex = CtEncodeSubmit("886912345678", "Hello", "886932000000", CT_DCS_UCS2, @status)
+	hexOne = CtEncodeSubmit("886912345678", "Hello", "886932000000", CT_DCS_UCS2, @status)
 	If status <> CT_OK Then Return FailStatus(status, "ct_pdu_encode_submit")
-	If Len(hex) = 0 Then
+	If Len(hexOne) = 0 Then
 		Print "EncodeSubmit returned empty hex"
 		Return 2
 	End If
-	Print hex
-	status = CtDecode(hex, @msg)
+	Print hexOne
+	status = CtDecode(hexOne, @msg)
 	If status <> CT_OK Then Return FailStatus(status, "ct_pdu_decode")
 	If CtMessageUserData(@msg) <> "Hello" OrElse CtMessagePeer(@msg) <> "886912345678" Then
 		Print "round-trip mismatch"

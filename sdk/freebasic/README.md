@@ -45,18 +45,29 @@ dumpbin /exports comettextel.dll | findstr ct_
 
 ```bat
 cd sdk\freebasic
-fbc -x pdu_example.exe pdu_example.bas
-copy /Y ..\..\build-c-sdk\Release\comettextel.dll .
-pdu_example.exe
-pdu_example.exe 886912345678 "Hello" 886932000000
+fbc -x Output\pdu_example.exe pdu_example.bas
+copy /Y ..\..\build-c-sdk\Release\comettextel.dll Output\
+Output\pdu_example.exe
 ```
 
+Or use the helper (finds `fbc64` / `fbc` + DLL automatically):
+
+```powershell
+cd sdk\freebasic
+.\verify.ps1
+.\verify.ps1 -FbcPath D:\IT\Developer\freebasic\fbc64.exe
+.\verify.ps1 -DllPath ..\..\build-c-sdk\Release\comettextel.dll
+```
+
+Note: a standalone FreeBASIC tree often has `fbc64.exe` next to `bin\`, not `bin\fbc.exe`.
 No arguments runs a self-check:
 
 - UCS-2 ASCII round-trip
 - UCS-2 Chinese via `WChr` code points → UTF-8 (avoids source-file encoding / `FFFD`)
 - UCS-2 concat (71× `B` → 2 segments with UDH)
 - Single-segment `ct_pdu_encode_submit`
+
+> Not built in CI (FreeBASIC is not on the runner). Run `verify.ps1` locally after installing FreeBASIC **x64**.
 
 ## FFI notes
 

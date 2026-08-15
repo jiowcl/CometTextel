@@ -23,3 +23,8 @@ compile_commands.json
 *.pdb
 *.ilk
 *.exp
+
+# Local SDK native copies / build outputs
+sdk/**/comettextel.dll
+sdk/**/libcomettextel.so*
+.tools/

@@ -53,13 +53,29 @@ Command line (adjust the PureBasic install path):
 
 ```bat
 cd sdk\purebasic
-pbcompiler pdu_example.pb /EXE pdu_example.exe
-pdu_example.exe
+pbcompiler pdu_example.pb /EXE Output\pdu_example.exe /CONSOLE
+copy /Y ..\..\build-c-sdk\Release\comettextel.dll Output\
+Output\pdu_example.exe
+```
+
+Or:
+
+```powershell
+cd sdk\purebasic
+.\verify.ps1
+```
+
+```bat
 pdu_example.exe 886912345678 "Hello" 886932000000
 pdu_example.exe 886912345678 "測試中文簡訊" 886932000000
 ```
 
-No arguments runs a small UCS-2 ASCII + Chinese round-trip self-check.
+No arguments runs a self-check:
+
+- UCS-2 ASCII round-trip
+- UCS-2 Chinese via `Chr` code points (avoids source-file encoding / `FFFD`)
+- UCS-2 concat (71× `B` → 2 segments with UDH)
+- Single-segment `ct_pdu_encode_submit`
 
 ## FFI notes
 

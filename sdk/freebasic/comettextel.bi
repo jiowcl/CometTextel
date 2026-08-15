@@ -77,12 +77,12 @@ Type CtPduEncodeSubmitSegmentsFn As Function CDecl ( _
 	) As Long
 Type CtPduDecodeFn As Function CDecl ( _
 	ByVal pdu_hex As ZString Ptr, _
-	ByVal out As CtMessage Ptr _
+	ByVal msg As CtMessage Ptr _
 	) As Long
 
 Dim Shared CtLib As Any Ptr = 0
-Dim Shared CtLoadError As String = ""
-Dim Shared CtLoadedPath As String = ""
+Dim Shared CtLoadError As String
+Dim Shared CtLoadedPath As String
 Dim Shared ct_status_string As CtStatusStringFn = 0
 Dim Shared ct_pdu_encode_submit As CtPduEncodeSubmitFn = 0
 Dim Shared ct_pdu_encode_submit_segments As CtPduEncodeSubmitSegmentsFn = 0
@@ -94,16 +94,16 @@ Dim Shared ct_pdu_decode As CtPduDecodeFn = 0
 ' <param name="dir">String</param>
 ' <param name="file">String</param>
 ' <returns>Returns String.</returns>
-Private Function CtJoinPath(ByRef dir As String, ByRef file As String) As String
-	If Len(dir) = 0 Then Return file
+Private Function CtJoinPath(ByRef folder As String, ByRef leaf As String) As String
+	If Len(folder) = 0 Then Return leaf
 
-	Dim As String last = Right(dir, 1)
+	Dim As String lastCh = Right(folder, 1)
 
-	If last <> "\" AndAlso last <> "/" Then
-		Return dir & "\" & file
+	If lastCh <> "\" AndAlso lastCh <> "/" Then
+		Return folder & "\" & leaf
 	End If
 
-	Return dir & file
+	Return folder & leaf
 End Function
 
 ' <summary>
@@ -111,11 +111,11 @@ End Function
 ' </summary>
 ' <param name="name">WString</param>
 ' <returns>Returns Any Ptr.</returns>
-Private Function CtBindExport(ByRef name As String) As Any Ptr
-	Dim As Any Ptr fn = DyLibSymbol(CtLib, name)
+Private Function CtBindExport(ByRef exportName As String) As Any Ptr
+	Dim As Any Ptr fn = DyLibSymbol(CtLib, exportName)
 
 	If fn = 0 Then
-		CtLoadError = "DyLibSymbol('" & name & "') failed in " & CtLoadedPath & _
+		CtLoadError = "DyLibSymbol('" & exportName & "') failed in " & CtLoadedPath & _
 			". Need a C ABI build (ct_* exports), not an old DLL."
 		Return 0
 	End If
@@ -133,10 +133,10 @@ Function CtUtf8FromW(ByRef w As WString) As String
 
 	If nbytes <= 1 Then Return ""
 
-	Dim As String out = String(nbytes - 1, 0)
-	WideCharToMultiByte(CP_UTF8, 0, StrPtr(w), -1, StrPtr(out), nbytes, NULL, NULL)
+	Dim As String utf8 = String(nbytes - 1, 0)
+	WideCharToMultiByte(CP_UTF8, 0, StrPtr(w), -1, StrPtr(utf8), nbytes, NULL, NULL)
 
-	Return out
+	Return utf8
 End Function
 
 ' <summary>
@@ -156,10 +156,10 @@ Function CtUtf8Z(ByVal p As UByte Ptr, ByVal maxBytes As Integer) As String
 
 	If n = 0 Then Return ""
 
-	Dim As String out = String(n, 0)
-	memcpy(StrPtr(out), p, n)
+	Dim As String utf8 = String(n, 0)
+	memcpy(StrPtr(utf8), p, n)
 
-	Return out
+	Return utf8
 End Function
 
 ' <summary>
@@ -180,10 +180,10 @@ Function CtPeekAsciiZ(ByVal p As ZString Ptr, ByVal maxBytes As Integer) As Stri
 
 	If n = 0 Then Return ""
 
-	Dim As String out = String(n, 0)
-	memcpy(StrPtr(out), b, n)
+	Dim As String ascii = String(n, 0)
+	memcpy(StrPtr(ascii), b, n)
 
-	Return out
+	Return ascii
 End Function
 
 ' <summary>
@@ -232,28 +232,28 @@ Function CtInit(ByRef dllPath As String = "comettextel.dll") As Long
 		Return 0
 	End If
 
-	ct_status_string = CtBindExport("ct_status_string")
+	ct_status_string = Cast(CtStatusStringFn, CtBindExport("ct_status_string"))
 
 	If ct_status_string = 0 Then
 		DyLibFree(CtLib) : CtLib = 0
 		Return 0
 	End If
 
-	ct_pdu_encode_submit = CtBindExport("ct_pdu_encode_submit")
+	ct_pdu_encode_submit = Cast(CtPduEncodeSubmitFn, CtBindExport("ct_pdu_encode_submit"))
 
 	If ct_pdu_encode_submit = 0 Then
 		DyLibFree(CtLib) : CtLib = 0
 		Return 0
 	End If
 
-	ct_pdu_encode_submit_segments = CtBindExport("ct_pdu_encode_submit_segments")
+	ct_pdu_encode_submit_segments = Cast(CtPduEncodeSubmitSegmentsFn, CtBindExport("ct_pdu_encode_submit_segments"))
 
 	If ct_pdu_encode_submit_segments = 0 Then
 		DyLibFree(CtLib) : CtLib = 0
 		Return 0
 	End If
 
-	ct_pdu_decode = CtBindExport("ct_pdu_decode")
+	ct_pdu_decode = Cast(CtPduDecodeFn, CtBindExport("ct_pdu_decode"))
 
 	If ct_pdu_decode = 0 Then
 		DyLibFree(CtLib) : CtLib = 0
@@ -295,11 +295,6 @@ Function CtStatusString(ByVal status As Long) As String
 	Return *msg
 End Function
 
-' <summary>
-' CtMessagePeer
-' </summary>
-' <param name="msg">CtMessage Ptr</param>
-' <returns>Returns String.</returns>
 Function CtMessagePeer(ByVal msg As CtMessage Ptr) As String
 	Return CtUtf8Z(@msg->peer_address(0), 32)
 End Function
@@ -320,18 +315,18 @@ End Function
 ' <param name="text">String</param>
 ' <param name="serviceCenter">String</param>
 ' <param name="dcs">Long</param>
-' <param name="status"> Long Ptr</param>
+' <param name="pStatus"> Long Ptr</param>
 ' <returns>Returns String.</returns>
 Function CtEncodeSubmit( _
 	ByRef destination As String, _
 	ByRef text As String, _
 	ByRef serviceCenter As String, _
 	ByVal dcs As Long, _
-	ByVal status As Long Ptr _
+	ByVal pStatus As Long Ptr _
 	) As String
 
 	If CtLib = 0 Then
-		If status <> 0 Then *status = CT_ERR_NOT_OPEN
+		If pStatus <> 0 Then *pStatus = CT_ERR_NOT_OPEN
 		Return ""
 	End If
 
@@ -345,7 +340,7 @@ Function CtEncodeSubmit( _
 
 	Dim As Long result = ct_pdu_encode_submit(StrPtr(smsc), StrPtr(dest), StrPtr(body), dcs, @hexbuf, cap)
 
-	If status <> 0 Then *status = result
+	If pStatus <> 0 Then *pStatus = result
 	If result <> CT_OK Then Return ""
 
 	Return CtPeekAsciiZ(@hexbuf, cap)
@@ -358,20 +353,20 @@ End Function
 ' <param name="text">String</param>
 ' <param name="serviceCenter">String</param>
 ' <param name="dcs">Long</param>
-' <param name="status"> Long Ptr</param>
-' <param name="outCount"> Long Ptr</param>
+' <param name="pStatus"> Long Ptr</param>
+' <param name="pOutCount"> Long Ptr</param>
 ' <returns>Returns String.</returns>
 Function CtEncodeSubmitSegments( _
 	ByRef destination As String, _
 	ByRef text As String, _
 	ByRef serviceCenter As String, _
 	ByVal dcs As Long, _
-	ByVal status As Long Ptr, _
-	ByVal outCount As Long Ptr _
+	ByVal pStatus As Long Ptr, _
+	ByVal pOutCount As Long Ptr _
 	) As String
 
 	If CtLib = 0 Then
-		If status <> 0 Then *status = CT_ERR_NOT_OPEN
+		If pStatus <> 0 Then *pStatus = CT_ERR_NOT_OPEN
 		Return ""
 	End If
 
@@ -386,8 +381,8 @@ Function CtEncodeSubmitSegments( _
 	Dim As Long result = ct_pdu_encode_submit_segments( _
 		StrPtr(smsc), StrPtr(dest), StrPtr(body), dcs, StrPtr(hexbuf), cap, @count)
 
-	If outCount <> 0 Then *outCount = count
-	If status <> 0 Then *status = result
+	If pOutCount <> 0 Then *pOutCount = count
+	If pStatus <> 0 Then *pStatus = result
 	If result <> CT_OK Then Return ""
 
 	Return CtPeekAsciiZ(StrPtr(hexbuf), cap)
@@ -397,16 +392,16 @@ End Function
 ' CtDecode
 ' </summary>
 ' <param name="pduHex">String</param>
-' <param name="out">CtMessage Ptr</param>
+' <param name="msg">CtMessage Ptr</param>
 ' <returns>Returns Long.</returns>
-Function CtDecode(ByRef pduHex As String, ByVal out As CtMessage Ptr) As Long
+Function CtDecode(ByRef pduHex As String, ByVal msg As CtMessage Ptr) As Long
 	If CtLib = 0 Then Return CT_ERR_NOT_OPEN
-	If out = 0 Then Return CT_ERR_INVALID_ARGUMENT
+	If msg = 0 Then Return CT_ERR_INVALID_ARGUMENT
 
-	Dim As String hex = pduHex
-	Clear *out, 0, SizeOf(CtMessage)
+	Dim As String pdu = pduHex
+	Clear *msg, 0, SizeOf(CtMessage)
 
-	Return ct_pdu_decode(StrPtr(hex), out)
+	Return ct_pdu_decode(StrPtr(pdu), msg)
 End Function
 
 ' <summary>
@@ -416,17 +411,17 @@ End Function
 ' <param name="text">WString</param>
 ' <param name="serviceCenter">WString</param>
 ' <param name="dcs">Long</param>
-' <param name="status">Long Ptr</param>
+' <param name="pStatus">Long Ptr</param>
 ' <returns>Returns string.</returns>
 Function CtEncodeSubmitW( _
 	ByRef destination As WString, _
 	ByRef text As WString, _
 	ByRef serviceCenter As WString, _
 	ByVal dcs As Long, _
-	ByVal status As Long Ptr _
+	ByVal pStatus As Long Ptr _
 	) As String
 
-	Return CtEncodeSubmit(CtUtf8FromW(destination), CtUtf8FromW(text), CtUtf8FromW(serviceCenter), dcs, status)
+	Return CtEncodeSubmit(CtUtf8FromW(destination), CtUtf8FromW(text), CtUtf8FromW(serviceCenter), dcs, pStatus)
 End Function
 
 ' <summary>
@@ -444,12 +439,12 @@ Function CtEncodeSubmitSegmentsW( _
 	ByRef text As WString, _
 	ByRef serviceCenter As WString, _
 	ByVal dcs As Long, _
-	ByVal status As Long Ptr, _
-	ByVal outCount As Long Ptr _
+	ByVal pStatus As Long Ptr, _
+	ByVal pOutCount As Long Ptr _
 	) As String
 
 	Return CtEncodeSubmitSegments( _
-		CtUtf8FromW(destination), CtUtf8FromW(text), CtUtf8FromW(serviceCenter), dcs, status, outCount)
+		CtUtf8FromW(destination), CtUtf8FromW(text), CtUtf8FromW(serviceCenter), dcs, pStatus, pOutCount)
 End Function
 
 #endif /' COMETTEXTEL_BI '/

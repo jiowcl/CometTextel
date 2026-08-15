@@ -84,6 +84,13 @@ Procedure.i RunSelfCheck()
   Protected msg.CtMessage
   Protected status.l
   Protected chinese.s
+  Protected longText.s
+  Protected count.l
+  Protected joined.s
+  Protected payload.s
+  Protected i.i
+  Protected part.s
+  Protected seq.l
   ; Do not put CJK in the .pb source: without UTF-8 BOM the C backend
   ; turns those literals into U+FFFD (PDU hex FFFD…). Use code points.
   chinese = Chr($6E2C) + Chr($8A66) + Chr($4E2D) + Chr($6587) + Chr($7C21) + Chr($8A0A)
@@ -101,6 +108,47 @@ Procedure.i RunSelfCheck()
   EndIf
   
   PrintN("ok (6 CJK chars, UCS-2)")
+
+  PrintN("-- self-check UCS-2 concat (71 ASCII -> 2 segments) --")
+  longText = LSet("", 71, "B")
+  count = 0
+  payload = ""
+  seq = 0
+  joined = CtEncodeSubmitSegments("886912345678", longText, "886932000000", #CT_DCS_UCS2, @status, @count)
+  If status <> #CT_OK
+    ProcedureReturn FailStatus(status, "ct_pdu_encode_submit_segments")
+  EndIf
+  If count <> 2
+    PrintN("expected 2 segments, got " + Str(count))
+    ProcedureReturn 2
+  EndIf
+
+  For i = 1 To CountString(joined, #LF$) + 1
+    part = StringField(joined, i, #LF$)
+    If part = ""
+      Continue
+    EndIf
+    seq = seq + 1
+    PrintN(part)
+    status = CtDecode(part, @msg)
+    If status <> #CT_OK
+      ProcedureReturn FailStatus(status, "ct_pdu_decode")
+    EndIf
+    If PrintDecoded(part) <> 0
+      ProcedureReturn 2
+    EndIf
+    If msg\is_concatenated = 0 Or msg\concat_total <> 2 Or msg\concat_seq <> seq
+      PrintN("concat metadata mismatch")
+      ProcedureReturn 2
+    EndIf
+    payload = payload + CtMessageUserData(@msg)
+  Next
+
+  If payload <> longText
+    PrintN("concat payload round-trip mismatch")
+    ProcedureReturn 2
+  EndIf
+  PrintN("ok")
 
   PrintN("-- self-check single-segment EncodeSubmit --")
   hex = CtEncodeSubmit("886912345678", "Hello", "886932000000", #CT_DCS_UCS2, @status)

@@ -70,6 +70,14 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Python SDK tests
+        shell: pwsh
+        run: |
+          $env:COMETTEXTEL_LIB = (Resolve-Path "artifact/comettextel-c-sdk-windows-x64/bin/comettextel.dll").Path
+          python -m pip install --upgrade pip
+          python -m pip install pytest
+          python -m pytest sdk/python -q
+
       - name: .NET PDU smoke tests
         shell: pwsh
         run: |
@@ -162,3 +170,12 @@ jobs:
           path: artifact/comettextel-c-sdk-linux-x64
           if-no-files-found: error
           retention-days: 14
+
+      - name: Python SDK tests
+        run: |
+          set -euo pipefail
+          so="$(find artifact/comettextel-c-sdk-linux-x64/lib -name 'libcomettextel.so*' -type f | head -n 1)"
+          test -n "$so"
+          export COMETTEXTEL_LIB="$so"
+          python3 -m pip install --user pytest
+          python3 -m pytest sdk/python -q
