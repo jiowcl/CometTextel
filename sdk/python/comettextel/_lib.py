@@ -1,4 +1,4 @@
-"""Locate and load ``comettextel`` shared library; bind PDU exports.
+"""Locate and load ``comettextel`` shared library; bind C ABI exports.
 
 Copyright (c) Ji-Feng Tsai. All rights reserved.
 Code released under the MIT license.
@@ -16,6 +16,7 @@ from ctypes import (
     c_int,
     c_int32,
     c_size_t,
+    c_uint32,
     c_void_p,
 )
 from pathlib import Path
@@ -24,6 +25,7 @@ from typing import Optional
 # Layout must match struct ct_message in include/comettextel/c_api.h.
 class CtMessage(ctypes.Structure):
     """Structure representing a CT message."""
+
     _fields_ = [
         ("index", c_int32),
         ("dcs", c_int32),
@@ -44,6 +46,7 @@ _lib: Optional[ctypes.CDLL] = None
 
 def _candidate_names() -> list[str]:
     """Return a list of candidate library names."""
+
     if sys.platform == "win32":
         return ["comettextel.dll"]
     if sys.platform == "darwin":
@@ -53,6 +56,7 @@ def _candidate_names() -> list[str]:
 
 def _search_dirs(explicit: Optional[Path]) -> list[Path]:
     """Search for the shared library in the given directories."""
+    
     dirs: list[Path] = []
     if explicit is not None:
         dirs.append(explicit if explicit.is_dir() else explicit.parent)
@@ -120,7 +124,7 @@ def find_library(path: Optional[str | Path] = None) -> Path:
 
 
 def load(path: Optional[str | Path] = None) -> ctypes.CDLL:
-    """Load (or return cached) shared library and configure PDU prototypes."""
+    """Load (or return cached) shared library and configure C ABI prototypes."""
 
     global _lib
     if _lib is not None and path is None:
@@ -136,6 +140,37 @@ def load(path: Optional[str | Path] = None) -> ctypes.CDLL:
 
     loaded.ct_status_string.argtypes = [c_int]
     loaded.ct_status_string.restype = c_char_p
+
+    loaded.ct_modem_create.argtypes = []
+    loaded.ct_modem_create.restype = c_void_p
+
+    loaded.ct_modem_destroy.argtypes = [c_void_p]
+    loaded.ct_modem_destroy.restype = None
+
+    loaded.ct_modem_open.argtypes = [c_void_p, c_char_p, c_uint32]
+    loaded.ct_modem_open.restype = c_int
+
+    loaded.ct_modem_send.argtypes = [
+        c_void_p,
+        c_char_p,
+        c_char_p,
+        c_char_p,
+        c_int,
+        c_int,
+    ]
+    loaded.ct_modem_send.restype = c_int
+
+    loaded.ct_modem_list.argtypes = [
+        c_void_p,
+        POINTER(CtMessage),
+        c_int,
+        POINTER(c_int),
+        c_int,
+    ]
+    loaded.ct_modem_list.restype = c_int
+
+    loaded.ct_modem_delete.argtypes = [c_void_p, c_int, c_int]
+    loaded.ct_modem_delete.restype = c_int
 
     loaded.ct_pdu_encode_submit.argtypes = [
         c_char_p,
@@ -167,6 +202,6 @@ def load(path: Optional[str | Path] = None) -> ctypes.CDLL:
 
 def reset() -> None:
     """Drop the cached CDLL (mainly for tests)."""
-    
+
     global _lib
     _lib = None

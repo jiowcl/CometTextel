@@ -3,7 +3,8 @@
 Thin **ctypes** binding to the same C ABI as the C SDK and CometTextel.NET (`c_api.h`).  
 This is **not** a second native library: it runtime-loads `comettextel.dll` / `libcomettextel.so`.
 
-**PDU only** in this sample (no modem yet). Tests run when the shared library is available; they skip otherwise.
+Covers **PDU** helpers and **GsmModem** (`open` / `send` / `list` / `delete`).  
+Hardware modem tests are optional; smoke tests run without a device.
 
 ![Python](https://img.shields.io/badge/language-python-blue.svg)
 
@@ -11,11 +12,13 @@ This is **not** a second native library: it runtime-loads `comettextel.dll` / `l
 
 ```text
 sdk/python/
-├── comettextel/          # package (ctypes + PDU helpers)
+├── comettextel/              # package (ctypes + PDU + modem)
 ├── examples/
-│   └── pdu_example.py    # encode / decode console sample + self-check
+│   ├── pdu_example.py        # encode / decode + self-check
+│   └── modem_example.py      # list / send / delete
 ├── tests/
-│   └── test_pdu.py
+│   ├── test_pdu.py
+│   └── test_modem.py
 └── README.md
 ```
 
@@ -25,6 +28,7 @@ sdk/python/
 |------|--------|
 | Python | 3.10+ (3.13 verified) |
 | Native | C SDK shared library (`comettextel.dll` or `libcomettextel.so`) |
+| Modem (optional) | AT modem in **PDU mode** (e.g. `COM3`, `/dev/ttyUSB0`) |
 
 Download `comettextel-c-sdk-*` from CI Artifacts or a GitHub Release, or use a local CMake build.
 
@@ -40,8 +44,6 @@ Search order:
 ```powershell
 # Windows
 $env:COMETTEXTEL_LIB = "D:\path\to\comettextel.dll"
-# or directory containing the DLL:
-$env:COMETTEXTEL_LIB = "D:\path\to\bin"
 ```
 
 ```bash
@@ -49,7 +51,7 @@ $env:COMETTEXTEL_LIB = "D:\path\to\bin"
 export COMETTEXTEL_LIB=/path/to/libcomettextel.so
 ```
 
-## Run the example
+## PDU example
 
 ```powershell
 cd sdk\python
@@ -58,12 +60,15 @@ python examples\pdu_example.py 886912345678 "Hello" 886932000000
 python examples\pdu_example.py 886912345678 "測試中文簡訊" 886932000000
 ```
 
-No arguments runs a self-check:
+## Modem example
 
-- UCS-2 ASCII round-trip
-- UCS-2 Chinese round-trip (UTF-8 source; expects real CJK in PDU, not `FFFD`)
-- UCS-2 concat (71× `B` → 2 segments with UDH)
-- Single-segment `ct_pdu_encode_submit`
+```powershell
+python examples\modem_example.py list COM3
+python examples\modem_example.py send COM3 886932000000 886912345678 "Hello"
+python examples\modem_example.py delete COM3 1
+```
+
+`list` rejoins **complete** concatenated SMS sets (`concat_seq == 0` / `Message.is_reassembled_concat`).
 
 ## Tests
 
@@ -76,11 +81,16 @@ pytest -q
 ## API sketch
 
 ```python
-from comettextel import DCS_UCS2, decode, encode_submit, encode_submit_segments
+from comettextel import DCS_UCS2, GsmModem, decode, encode_submit_segments
 
 parts = encode_submit_segments("886912345678", "Hello", "886932000000", DCS_UCS2)
 msg = decode(parts[0])
-print(msg.peer_address, msg.user_data, msg.is_concatenated)
+
+with GsmModem() as modem:
+    modem.open("COM3", 115200)
+    modem.send("886912345678", "Hello from Python", smsc="886932000000")
+    for m in modem.list():
+        print(m.index, m.peer_address, m.user_data, m.is_reassembled_concat)
 ```
 
 All text at the native boundary is **UTF-8**. Do not reimplement PDU codecs in Python; if the C ABI changes, update this package only.

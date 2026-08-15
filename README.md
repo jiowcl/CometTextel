@@ -99,7 +99,7 @@ comettextel_c_api_example pdu 886912345678 "Hello" 886932000000
 
 CI / Release also publish focused **C SDK** artifacts (`comettextel-c-sdk-*`) with only `c_api.h`, shared/static libs, and the example source — see [`sdk/c/README.md`](sdk/c/README.md).  
 
-Optional language samples (thin FFI, same shared library; not built in CI): [`sdk/python/`](sdk/python) (ctypes, PDU), [`sdk/purebasic/`](sdk/purebasic) (PDU), [`sdk/freebasic/`](sdk/freebasic) (PDU).  
+Optional language samples (thin FFI, same shared library; not built in CI): [`sdk/python/`](sdk/python) (ctypes, PDU + modem), [`sdk/purebasic/`](sdk/purebasic) (PDU), [`sdk/freebasic/`](sdk/freebasic) (PDU).  
 
 ## .NET NuGet (optional)  
 
@@ -219,7 +219,7 @@ comettextel/
 ├── nuget/CometTextel.NET/ # Optional .NET NuGet wrapper (P/Invoke)
 ├── scripts/               # CI helpers (e.g. stage_c_sdk)
 ├── sdk/c/                 # C SDK package README template
-├── sdk/python/            # Optional Python ctypes PDU sample (not in CI)
+├── sdk/python/            # Optional Python ctypes PDU + modem sample (not in CI)
 ├── sdk/purebasic/         # Optional PureBasic PDU sample (not in CI)
 ├── sdk/freebasic/         # Optional FreeBASIC PDU sample (not in CI)
 ├── src/                   # Library sources

@@ -34,21 +34,46 @@ class Message:
     concat_seq: int = 0
     service_center: str = ""
     service_timestamp: str = ""
-    index: int = 0
+    index: int = -1
+
+    @property
+    def is_reassembled_concat(self) -> bool:
+        """True when list/reassembly joined a complete multi-part set."""
+        return self.is_concatenated and self.concat_seq == 0 and self.concat_total > 0
 
 
 def _as_utf8(text: str) -> bytes:
+    """Convert a Python string to a UTF-8 encoded bytes object."""
+    
     return text.encode("utf-8")
 
 
 def _c_z(buf: ctypes.Array) -> str:
-    """Convert a C string to a Python string."""
+    """Convert a C string buffer to a Python string."""
 
     raw = bytes(buf)
     nul = raw.find(b"\x00")
     if nul >= 0:
         raw = raw[:nul]
     return raw.decode("utf-8", errors="replace")
+
+
+def message_from_ct(out: _lib.CtMessage) -> Message:
+    """Build a :class:`Message` from a native ``ct_message``."""
+
+    return Message(
+        index=int(out.index),
+        dcs=int(out.dcs),
+        has_udh=bool(out.has_udh),
+        service_center=_c_z(out.service_center),
+        peer_address=_c_z(out.peer_address),
+        service_timestamp=_c_z(out.service_timestamp),
+        user_data=_c_z(out.user_data),
+        is_concatenated=bool(out.is_concatenated),
+        concat_ref=int(out.concat_ref),
+        concat_total=int(out.concat_total),
+        concat_seq=int(out.concat_seq),
+    )
 
 
 def status_string(status: int) -> str:
@@ -63,6 +88,7 @@ def status_string(status: int) -> str:
 
 def _check(status: int, what: str) -> None:
     """Check if a status code is OK."""
+
     if status != Status.OK:
         raise CometTextelError(status, what, status_string(status))
 
@@ -132,19 +158,7 @@ def decode(pdu_hex: str) -> Message:
     out = _lib.CtMessage()
     status = lib.ct_pdu_decode(_as_utf8(pdu_hex.strip()), ctypes.byref(out))
     _check(status, "ct_pdu_decode")
-    return Message(
-        index=int(out.index),
-        dcs=int(out.dcs),
-        has_udh=bool(out.has_udh),
-        service_center=_c_z(out.service_center),
-        peer_address=_c_z(out.peer_address),
-        service_timestamp=_c_z(out.service_timestamp),
-        user_data=_c_z(out.user_data),
-        is_concatenated=bool(out.is_concatenated),
-        concat_ref=int(out.concat_ref),
-        concat_total=int(out.concat_total),
-        concat_seq=int(out.concat_seq),
-    )
+    return message_from_ct(out)
 
 
 def load_library(path: Optional[str] = None) -> None:
