@@ -465,6 +465,121 @@ void test_encode_segments_eightbit_concat()
     CHECK(joined == message.user_data);
 }
 
+void test_reassemble_ucs2_complete()
+{
+    comettextel::Message message;
+    message.service_center = "886932000000";
+    message.peer_address = "886912345678";
+    message.coding = comettextel::DataCoding::Ucs2;
+    message.user_data.assign(71, 'B');
+    message.concat_ref = 0x12;
+
+    std::vector<std::string> parts;
+    CHECK(!comettextel::PduCodec::encode_segments(message, parts));
+    CHECK(parts.size() == 2);
+
+    std::vector<comettextel::Message> decoded;
+    for (std::size_t i = 0; i < parts.size(); ++i) {
+        comettextel::Message part;
+        CHECK(!comettextel::PduCodec::decode(parts[i], part));
+        part.index = static_cast<std::int16_t>(10 + static_cast<int>(i));
+        decoded.push_back(std::move(part));
+    }
+
+    const auto joined = comettextel::PduCodec::reassemble_messages(std::move(decoded));
+    CHECK(joined.size() == 1);
+    CHECK(joined[0].is_reassembled_concat());
+    CHECK(joined[0].is_concatenated);
+    CHECK(joined[0].concat_ref == 0x12);
+    CHECK(joined[0].concat_total == 2);
+    CHECK(joined[0].concat_seq == 0);
+    CHECK(!joined[0].has_udh);
+    CHECK(joined[0].index == 10);
+    CHECK(joined[0].user_data == message.user_data);
+    CHECK(joined[0].peer_address == message.peer_address);
+}
+
+void test_reassemble_incomplete_keeps_segments()
+{
+    comettextel::Message message;
+    message.service_center = "886932000000";
+    message.peer_address = "886912345678";
+    message.coding = comettextel::DataCoding::Ucs2;
+    message.user_data.assign(71, 'C');
+    message.concat_ref = 0x34;
+
+    std::vector<std::string> parts;
+    CHECK(!comettextel::PduCodec::encode_segments(message, parts));
+    CHECK(parts.size() == 2);
+
+    comettextel::Message only_first;
+    CHECK(!comettextel::PduCodec::decode(parts[0], only_first));
+
+    auto out = comettextel::PduCodec::reassemble_messages({only_first});
+    CHECK(out.size() == 1);
+    CHECK(out[0].is_concatenated);
+    CHECK(!out[0].is_reassembled_concat());
+    CHECK(out[0].concat_seq == 1);
+    CHECK(out[0].user_data == only_first.user_data);
+}
+
+void test_reassemble_preserves_singles_and_order()
+{
+    comettextel::Message single;
+    single.peer_address = "886911111111";
+    single.coding = comettextel::DataCoding::Ucs2;
+    single.user_data = "Solo";
+
+    comettextel::Message long_msg;
+    long_msg.service_center = "886932000000";
+    long_msg.peer_address = "886912345678";
+    long_msg.coding = comettextel::DataCoding::Ucs2;
+    long_msg.user_data.assign(71, 'D');
+    long_msg.concat_ref = 0x55;
+
+    std::vector<std::string> parts;
+    CHECK(!comettextel::PduCodec::encode_segments(long_msg, parts));
+    CHECK(parts.size() == 2);
+
+    // Arrive out of order: single, part2, part1
+    comettextel::Message p2;
+    comettextel::Message p1;
+    CHECK(!comettextel::PduCodec::decode(parts[1], p2));
+    CHECK(!comettextel::PduCodec::decode(parts[0], p1));
+
+    auto out = comettextel::PduCodec::reassemble_messages({single, p2, p1});
+    CHECK(out.size() == 2);
+    CHECK(out[0].user_data == "Solo");
+    CHECK(!out[0].is_concatenated);
+    CHECK(out[1].is_reassembled_concat());
+    CHECK(out[1].user_data == long_msg.user_data);
+}
+
+void test_parse_message_list_reassembles()
+{
+    comettextel::Message message;
+    message.service_center = "886932000000";
+    message.peer_address = "886912345678";
+    message.coding = comettextel::DataCoding::Ucs2;
+    message.user_data.assign(71, 'E');
+    message.concat_ref = 0x77;
+
+    std::vector<std::string> parts;
+    CHECK(!comettextel::PduCodec::encode_segments(message, parts));
+    CHECK(parts.size() == 2);
+
+    comettextel::ResponseBuffer buffer;
+    buffer.data = "+CMGL: 3,1,,,\r\n" + parts[0] + "\r\n" +
+                  "+CMGL: 4,1,,,\r\n" + parts[1] + "\r\n" +
+                  "OK\r\n";
+
+    const auto listed = comettextel::GsmModem::parse_message_list(buffer);
+    CHECK(listed.size() == 1);
+    CHECK(listed[0].is_reassembled_concat());
+    CHECK(listed[0].index == 3);
+    CHECK(listed[0].user_data == message.user_data);
+}
+
 void test_c_api_pdu_roundtrip()
 {
 #if defined(COMETTEXTEL_HAS_C_API)
@@ -567,6 +682,10 @@ int main()
     test_encode_segments_gsm7_concat();
     test_encode_segments_ucs2_concat();
     test_encode_segments_eightbit_concat();
+    test_reassemble_ucs2_complete();
+    test_reassemble_incomplete_keeps_segments();
+    test_reassemble_preserves_singles_and_order();
+    test_parse_message_list_reassembles();
     test_c_api_pdu_roundtrip();
     test_c_api_concat_fields();
     test_c_api_encode_segments();

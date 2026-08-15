@@ -79,7 +79,8 @@ namespace CometTextel.NET.Core
         }
 
         /// <summary>
-        /// Lists stored messages.
+        /// Lists stored messages. Complete concatenated-SMS sets are rejoined
+        /// (<see cref="SmsMessage.ConcatSeq"/> == 0 / <see cref="SmsMessage.IsReassembledConcat"/>).
         /// </summary>
         /// <param name="maxCount">The maximum number of messages to list.</param>
         /// <param name="timeoutMs">The timeout in milliseconds.</param>
@@ -96,6 +97,7 @@ namespace CometTextel.NET.Core
             Pdu.EnsureOk(status);
 
             List<SmsMessage> list = new List<SmsMessage>(count);
+            
             for (var i = 0; i < count; i++)
             {
                 list.Add(SmsMessage.FromNative(buffer[i]));

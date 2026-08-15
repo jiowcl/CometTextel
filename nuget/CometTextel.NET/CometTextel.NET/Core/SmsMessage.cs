@@ -26,8 +26,8 @@ namespace CometTextel.NET.Core
         public bool HasUdh { get; init; }
 
         /// <summary>
-        /// True when a concatenated SMS IE (0x00 / 0x08) was present in the UDH.
-        /// Segments are not reassembled.
+        /// True when a concatenated SMS IE (0x00 / 0x08) was present in the UDH,
+        /// or when <see cref="ListMessages"/> rejoined a complete multi-part set.
         /// </summary>
         public bool IsConcatenated { get; init; }
 
@@ -42,9 +42,15 @@ namespace CometTextel.NET.Core
         public int ConcatTotal { get; init; }
 
         /// <summary>
-        /// 1-based segment index (valid when <see cref="IsConcatenated"/>).
+        /// 1-based segment index; <c>0</c> when the message is a reassembled full set.
         /// </summary>
         public int ConcatSeq { get; init; }
+
+        /// <summary>
+        /// True when this message is a full join of concat segments
+        /// (<see cref="IsConcatenated"/> and <see cref="ConcatSeq"/> == 0).
+        /// </summary>
+        public bool IsReassembledConcat => IsConcatenated && ConcatSeq == 0 && ConcatTotal > 0;
 
         /// <summary>
         /// Service center of the message.

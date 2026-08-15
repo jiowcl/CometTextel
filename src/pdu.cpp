@@ -12,6 +12,10 @@
 #include <algorithm>
 #include <cctype>
 #include <cstring>
+#include <map>
+#include <tuple>
+#include <utility>
+#include <vector>
 
 namespace comettextel {
 namespace {
@@ -1056,6 +1060,168 @@ std::error_code PduCodec::decode(std::string_view pdu_hex, Message& message)
     }
 
     return {};
+}
+
+namespace {
+
+/**
+ * @brief Key for grouping concatenated SMS segments.
+ * @param peer The peer address.
+ * @param ref The reference number.
+ * @param total Total number of segments in the group.
+ * @param coding The coding scheme.
+ */
+struct ConcatGroupKey {
+    std::string peer;
+    std::uint16_t ref{0};
+    std::uint8_t total{0};
+    DataCoding coding{DataCoding::Ucs2};
+
+    /**
+     * @brief Compares two concatenated SMS group keys.
+     * @param other The other key to compare to.
+     * @return True if this key is less than the other key, false otherwise.
+     */
+    [[nodiscard]] bool operator<(const ConcatGroupKey& other) const
+    {
+        return std::tie(peer, ref, total, coding) <
+               std::tie(other.peer, other.ref, other.total, other.coding);
+    }
+};
+
+/**
+ * @brief Checks if a message is a concatenated SMS segment.
+ * @param message The message to check.
+ * @return True if the message is a concatenated SMS segment, false otherwise.
+ */
+[[nodiscard]] bool is_concat_segment(const Message& message) noexcept
+{
+    return message.is_concatenated && message.concat_total > 0 && message.concat_seq > 0 &&
+           message.concat_seq <= message.concat_total;
+}
+
+/**
+ * @brief Merges a group of concatenated SMS segments into a single message.
+ * @param by_seq Map of sequence numbers to messages.
+ * @param total Total number of segments in the group.
+ * @return Merged message.
+ */
+[[nodiscard]] Message merge_concat_group(const std::map<std::uint8_t, Message>& by_seq,
+                                         std::uint8_t total)
+{
+    Message merged = by_seq.begin()->second;
+    merged.has_udh = false;
+    merged.is_concatenated = true;
+    merged.concat_total = total;
+    merged.concat_seq = 0;
+    merged.user_data.clear();
+
+    std::int16_t best_index = -1;
+
+    for (std::uint8_t seq = 1; seq <= total; ++seq) {
+        const Message& part = by_seq.at(seq);
+        merged.user_data += part.user_data;
+
+        if (part.index >= 0 && (best_index < 0 || part.index < best_index)) {
+            best_index = part.index;
+        }
+    }
+
+    merged.index = best_index;
+
+    return merged;
+}
+
+} // namespace
+
+/**
+ * @brief Joins complete concatenated-SMS segment sets into single messages.
+ * @param messages Decoded segments and/or single-part messages.
+ * @return Reassembled list (incomplete groups kept as individual segments).
+ */
+std::vector<Message> PduCodec::reassemble_messages(std::vector<Message> messages)
+{
+    enum class SlotKind : std::uint8_t { Single, Group };
+
+    struct OrderSlot {
+        SlotKind kind{SlotKind::Single};
+        std::size_t single_index{0};
+        ConcatGroupKey key{};
+    };
+
+    std::map<ConcatGroupKey, std::map<std::uint8_t, Message>> groups;
+    std::vector<OrderSlot> order;
+    order.reserve(messages.size());
+
+    for (std::size_t i = 0; i < messages.size(); ++i) {
+        Message& message = messages[i];
+        if (!is_concat_segment(message)) {
+            order.push_back(OrderSlot{SlotKind::Single, i, {}});
+            continue;
+        }
+
+        ConcatGroupKey key;
+        key.peer = message.peer_address;
+        key.ref = message.concat_ref;
+        key.total = message.concat_total;
+        key.coding = message.coding;
+
+        auto& bucket = groups[key];
+
+        if (bucket.find(message.concat_seq) != bucket.end()) {
+            // Duplicate seq for this group — leave as a standalone entry.
+            order.push_back(OrderSlot{SlotKind::Single, i, {}});
+            continue;
+        }
+
+        if (bucket.empty()) {
+            order.push_back(OrderSlot{SlotKind::Group, 0, key});
+        }
+
+        bucket.emplace(message.concat_seq, std::move(message));
+    }
+
+    std::vector<Message> out;
+    out.reserve(messages.size());
+
+    for (const OrderSlot& slot : order) {
+        if (slot.kind == SlotKind::Single) {
+            out.push_back(std::move(messages[slot.single_index]));
+            continue;
+        }
+
+        auto it = groups.find(slot.key);
+
+        if (it == groups.end()) {
+            continue;
+        }
+
+        auto& by_seq = it->second;
+        const std::uint8_t total = slot.key.total;
+        bool complete = by_seq.size() == static_cast<std::size_t>(total);
+
+        if (complete) {
+            for (std::uint8_t seq = 1; seq <= total; ++seq) {
+                if (by_seq.find(seq) == by_seq.end()) {
+                    complete = false;
+                    break;
+                }
+            }
+        }
+
+        if (complete) {
+            out.push_back(merge_concat_group(by_seq, total));
+        } else {
+            for (auto& [seq, part] : by_seq) {
+                (void)seq;
+                out.push_back(std::move(part));
+            }
+        }
+
+        groups.erase(it);
+    }
+
+    return out;
 }
 
 } // namespace comettextel

@@ -130,9 +130,25 @@ public:
      *       skipped so @ref Message::user_data contains the payload text only.
      *       Concatenated SMS IEI 0x00 (8-bit ref) and 0x08 (16-bit ref) are
      *       parsed into @ref Message::is_concatenated / concat_* fields.
-     *       Segments are still not reassembled.
+     *       Use @ref reassemble_messages to join complete segment sets.
      */
     [[nodiscard]] static std::error_code decode(std::string_view pdu_hex, Message& message);
+
+    /**
+     * @brief Joins complete concatenated-SMS segment sets into single messages.
+     * @param messages Decoded segments and/or single-part messages (order preserved
+     *        for non-grouped items and for the first segment of each group).
+     * @return Messages with complete groups merged; incomplete groups left as
+     *         individual segments; non-concat messages unchanged.
+     *
+     * @note Group key: peer address + concat_ref + concat_total + coding.
+     *       A merged message has @ref Message::concat_seq == 0,
+     *       @ref Message::is_concatenated == true, @c has_udh == false, and
+     *       @c user_data equal to the concatenation of parts 1..total.
+     *       @c index is the minimum non-negative storage index among parts
+     *       (or @c -1 if none).
+     */
+    [[nodiscard]] static std::vector<Message> reassemble_messages(std::vector<Message> messages);
 };
 
 } // namespace comettextel

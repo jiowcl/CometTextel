@@ -25,7 +25,7 @@
 
 - **Send auto-splits** long text with concatenated SMS UDH (IEI `0x00`, ≤ 255 parts). `PduCodec::encode` remains single-segment and still rejects over-limit payloads.  
 - **UDH on receive**: when TP-UDHI is set, the header is **skipped** so `user_data` is payload text only (`Message::has_udh == true`).  
-- **Concat metadata**: IEI `0x00` (8-bit ref) and `0x08` (16-bit ref) are parsed into `is_concatenated` / `concat_ref` / `concat_total` / `concat_seq`. Segments are **not** joined yet.  
+- **Concat**: IEI `0x00` / `0x08` fill `is_concatenated` / `concat_*`. `PduCodec::reassemble_messages` (and `GsmModem::parse_message_list`) join **complete** segment sets into one message (`concat_seq == 0`, `is_reassembled_concat()`). Incomplete sets stay as separate segments.  
 - **Per-segment payload caps**:  
   - Single (no UDH): GSM 7-bit ≤ **160** septets; 8-bit / UCS-2 ≤ **140** octets  
   - Concat (with UDH): GSM 7-bit ≤ **153** septets; 8-bit / UCS-2 ≤ **134** octets  
@@ -244,8 +244,7 @@ Code released under the MIT license.
 
 ## TODO  
 
-- Concatenated SMS reassembly on list / receive  
-- Longer modem async I/O / thread-safe serial  
+- Longer modem async I/O / thread-safe serial   
 
 ## Donation  
 

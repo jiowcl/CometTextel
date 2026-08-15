@@ -130,7 +130,8 @@ public:
     /**
      * @brief Parses @c +CMGL lines from a completed response buffer.
      * @param buffer The buffer to parse.
-     * @return The message list.
+     * @return The message list (complete concat sets are reassembled; see
+     *         @ref PduCodec::reassemble_messages).
      */
     [[nodiscard]] static std::vector<Message> parse_message_list(const ResponseBuffer& buffer);
 

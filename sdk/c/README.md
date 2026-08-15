@@ -88,7 +88,7 @@ When using the static library, define `COMETTEXTEL_STATIC` before including `c_a
 ## Limitations
 
 - `ct_pdu_encode_submit` is single-segment; `ct_pdu_encode_submit_segments` and `ct_modem_send` auto-split with concat UDH (IEI 0x00).
-- On receive, UDH is skipped (`has_udh`); concat IEI 0x00 / 0x08 fill `is_concatenated` / `concat_*`. Parts are not joined.
+- On receive / list, UDH is skipped (`has_udh`); concat IEI 0x00 / 0x08 fill `is_concatenated` / `concat_*`. `ct_modem_list` rejoins **complete** segment sets (`concat_seq == 0`). Incomplete parts remain separate.
 
 ## See also
 

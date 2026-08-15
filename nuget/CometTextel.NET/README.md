@@ -37,7 +37,7 @@ Consumer projects must target **Windows x64** so `comettextel.dll` can load.
 
 Payload caps: single GSM 7-bit ≤ 160 / 8-bit·UCS-2 ≤ 140; concat GSM 7-bit ≤ 153 / 8-bit·UCS-2 ≤ 134.
 
-On receive, if TP-UDHI is set, the UDH is **skipped** (`HasUdh == true`). Concat IEI `0x00` / `0x08` populate `IsConcatenated`, `ConcatRef`, `ConcatTotal`, `ConcatSeq`. Multi-part messages are **not** reassembled.
+On receive / list, if TP-UDHI is set, the UDH is **skipped** (`HasUdh == true`). Concat IEI `0x00` / `0x08` populate `IsConcatenated`, `ConcatRef`, `ConcatTotal`, `ConcatSeq`. `GsmModem.ListMessages` rejoins **complete** segment sets (`ConcatSeq == 0`, `IsReassembledConcat`). Incomplete parts remain separate.
 
 ### Strings
 
@@ -155,7 +155,6 @@ Code released under the MIT license.
 
 ## TODO
 
-- Concatenated SMS reassembly APIs  
 - Optional linux-x64 NuGet RID assets  
 
 ## Donation

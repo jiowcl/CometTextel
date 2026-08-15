@@ -71,7 +71,7 @@ typedef struct ct_message {
     int32_t concat_ref;
     /** @brief Total segment count (valid when is_concatenated != 0). */
     int32_t concat_total;
-    /** @brief 1-based segment index (valid when is_concatenated != 0). */
+    /** @brief 1-based segment index; 0 when list/reassembly joined a complete set. */
     int32_t concat_seq;
 } ct_message;
 
@@ -126,6 +126,8 @@ CT_API int ct_modem_send(ct_modem* modem,
  * @param out_count Receives the number of messages written.
  * @param timeout_ms The timeout in milliseconds.
  * @return The status code.
+ *
+ * @note Complete concatenated-SMS sets are rejoined (concat_seq == 0).
  */
 CT_API int ct_modem_list(ct_modem* modem,
                          ct_message* out,

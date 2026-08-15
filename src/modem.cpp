@@ -196,6 +196,13 @@ std::error_code GsmModem::send_message(const Message& message,
     return {};
 }
 
+/**
+ * @brief Sends an encoded PDU to the modem.
+ * @param pdu_hex The PDU to send.
+ * @param bytes_written The number of bytes written.
+ * @param timeout The timeout duration.
+ * @return An error code if the operation failed.
+ */
 std::error_code GsmModem::send_encoded_pdu(std::string pdu_hex,
                                            std::size_t* bytes_written,
                                            std::chrono::milliseconds timeout)
@@ -385,7 +392,7 @@ std::error_code GsmModem::wait_until_ok(ResponseBuffer& buffer,
 /**
  * @brief Parses the message list from the modem.
  * @param buffer The buffer to store the response.
- * @return The message list.
+ * @return The message list (complete concat sets reassembled).
  */
 std::vector<Message> GsmModem::parse_message_list(const ResponseBuffer& buffer)
 {
@@ -412,7 +419,9 @@ std::vector<Message> GsmModem::parse_message_list(const ResponseBuffer& buffer)
         const char* end = std::strstr(ptr, "\r\n");
         std::string_view pdu = end ? std::string_view{ptr, static_cast<std::size_t>(end - ptr)}
                                    : std::string_view{ptr};
+        const std::int16_t saved_index = msg.index;
         if (!PduCodec::decode(pdu, msg)) {
+            msg.index = saved_index;
             messages.push_back(std::move(msg));
         }
 
@@ -423,7 +432,7 @@ std::vector<Message> GsmModem::parse_message_list(const ResponseBuffer& buffer)
         }
     }
 
-    return messages;
+    return PduCodec::reassemble_messages(std::move(messages));
 }
 
 /**
