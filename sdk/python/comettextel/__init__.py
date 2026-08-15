@@ -2,6 +2,9 @@
 
 Requires the shared library from the C SDK (`comettextel.dll` / `libcomettextel.so`).
 Does not reimplement PDU codecs.
+
+Copyright (c) Ji-Feng Tsai. All rights reserved.
+Code released under the MIT license.
 """
 
 from __future__ import annotations

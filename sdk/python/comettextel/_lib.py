@@ -1,4 +1,8 @@
-"""Locate and load ``comettextel`` shared library; bind PDU exports."""
+"""Locate and load ``comettextel`` shared library; bind PDU exports.
+
+Copyright (c) Ji-Feng Tsai. All rights reserved.
+Code released under the MIT license.
+"""
 
 from __future__ import annotations
 

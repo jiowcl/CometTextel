@@ -1,4 +1,8 @@
-"""Status codes mirroring ``enum ct_status`` in ``c_api.h``."""
+"""Status codes mirroring ``enum ct_status`` in ``c_api.h``.
+
+Copyright (c) Ji-Feng Tsai. All rights reserved.
+Code released under the MIT license.
+"""
 
 from __future__ import annotations
 

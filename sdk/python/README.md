@@ -89,5 +89,6 @@ All text at the native boundary is **UTF-8**. Do not reimplement PDU codecs in P
 
 - [`include/comettextel/c_api.h`](../../include/comettextel/c_api.h)
 - [`sdk/c/README.md`](../c/README.md)
+- [`sdk/freebasic/README.md`](../freebasic/README.md)
 - [`sdk/purebasic/README.md`](../purebasic/README.md)
 - [`examples/c_api_example.c`](../../examples/c_api_example.c)

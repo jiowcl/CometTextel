@@ -74,4 +74,6 @@ Do not reimplement PDU codecs in PureBasic. If the C ABI changes, update `comett
 
 - [`include/comettextel/c_api.h`](../../include/comettextel/c_api.h)
 - [`sdk/c/README.md`](../c/README.md)
+- [`sdk/freebasic/README.md`](../freebasic/README.md)
+- [`sdk/python/README.md`](../python/README.md)
 - [`examples/c_api_example.c`](../../examples/c_api_example.c)

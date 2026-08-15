@@ -1,4 +1,8 @@
-"""PDU encode / decode helpers over ``ct_pdu_*``."""
+"""PDU encode / decode helpers over ``ct_pdu_*``.
+
+Copyright (c) Ji-Feng Tsai. All rights reserved.
+Code released under the MIT license.
+"""
 
 from __future__ import annotations
 

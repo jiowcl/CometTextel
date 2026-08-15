@@ -96,3 +96,4 @@ When using the static library, define `COMETTEXTEL_STATIC` before including `c_a
 - .NET: `nuget/CometTextel.NET`
 - Python (`ctypes`, PDU only): [`sdk/python/README.md`](../python/README.md)
 - PureBasic (`LoadLibrary` / `GetProcAddress`, PDU only): [`sdk/purebasic/README.md`](../purebasic/README.md)
+- FreeBASIC (`DyLibLoad`, PDU only): [`sdk/freebasic/README.md`](../freebasic/README.md)
