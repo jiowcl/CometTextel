@@ -37,7 +37,7 @@ Download `comettextel-c-sdk-*` from CI Artifacts or a GitHub Release, or use a l
 Search order:
 
 1. Explicit path passed to `comettextel.pdu.load_library(...)`
-2. Environment variable **`COMETTEXTEL_LIB`** (file or directory)
+2. Environment variable **`COMETTEXTEL_LIB`** (shared-library **file** or a directory containing it — including versioned Linux sonames such as `libcomettextel.so.1.3.0`)
 3. Current working directory
 4. Nearby build / artifact folders (`build-c-sdk/Release`, `artifact/comettextel-c-sdk-*/…`)
 

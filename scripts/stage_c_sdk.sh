@@ -37,13 +37,21 @@ done
 
 mkdir -p "$OutDir/lib" "$OutDir/include/comettextel" "$OutDir/examples"
 
-mapfile -t libs < <(find "$BuildDir" -maxdepth 3 -type f \( -name 'libcomettextel.so*' -o -name 'libcomettextel.a' \) | sort)
+mapfile -t libs < <(find "$BuildDir" -maxdepth 3 \( -type f -o -type l \) \( -name 'libcomettextel.so*' -o -name 'libcomettextel.a' \) | sort)
 if [[ ${#libs[@]} -eq 0 ]]; then
   echo "No libcomettextel shared/static libraries under $BuildDir" >&2
   exit 1
 fi
 
 cp -a "${libs[@]}" "$OutDir/lib/"
+
+# Ensure an unversioned libcomettextel.so exists for consumers / COMETTEXTEL_LIB.
+if [[ ! -e "$OutDir/lib/libcomettextel.so" ]]; then
+  real="$(find "$OutDir/lib" -maxdepth 1 -type f -name 'libcomettextel.so.*' | sort | head -n 1 || true)"
+  if [[ -n "${real:-}" ]]; then
+    ln -sfn "$(basename "$real")" "$OutDir/lib/libcomettextel.so"
+  fi
+fi
 cp -a "$header" "$OutDir/include/comettextel/c_api.h"
 cp -a "$example" "$OutDir/examples/c_api_example.c"
 cp -a "$sdk_readme" "$OutDir/README.md"

@@ -174,8 +174,17 @@ jobs:
       - name: Python SDK tests
         run: |
           set -euo pipefail
-          so="$(find artifact/comettextel-c-sdk-linux-x64/lib -name 'libcomettextel.so*' -type f | head -n 1)"
-          test -n "$so"
-          export COMETTEXTEL_LIB="$so"
+          libdir="artifact/comettextel-c-sdk-linux-x64/lib"
+          # Prefer unversioned .so; fall back to any libcomettextel.so* (stage may
+          # only copy the real soname file without symlinks).
+          if [[ -e "$libdir/libcomettextel.so" ]]; then
+            so="$libdir/libcomettextel.so"
+          else
+            so="$(find "$libdir" -maxdepth 1 \( -type f -o -type l \) -name 'libcomettextel.so*' | sort | head -n 1)"
+          fi
+          test -n "${so:-}"
+          test -e "$so"
+          export COMETTEXTEL_LIB="$(realpath -e "$so")"
+          echo "COMETTEXTEL_LIB=$COMETTEXTEL_LIB"
           python3 -m pip install --user pytest
           python3 -m pytest sdk/python -q

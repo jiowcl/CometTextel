@@ -54,9 +54,36 @@ def _candidate_names() -> list[str]:
     return ["libcomettextel.so", "libcomettextel.so.1", "comettextel.so"]
 
 
+def _is_usable_lib(path: Path) -> bool:
+    """True when @p path is a loadable shared library (file or symlink to one)."""
+    
+    try:
+        return path.is_file() and not path.name.endswith(".a")
+    except OSError:
+        return False
+
+
+def _glob_libs_in(directory: Path) -> list[Path]:
+    """Find versioned shared libs that fixed candidate names may miss."""
+
+    if sys.platform == "win32":
+        patterns = ["comettextel.dll"]
+    elif sys.platform == "darwin":
+        patterns = ["libcomettextel*.dylib", "comettextel*.dylib"]
+    else:
+        patterns = ["libcomettextel.so*"]
+
+    found: list[Path] = []
+    for pattern in patterns:
+        for candidate in sorted(directory.glob(pattern)):
+            if _is_usable_lib(candidate):
+                found.append(candidate)
+    return found
+
+
 def _search_dirs(explicit: Optional[Path]) -> list[Path]:
     """Search for the shared library in the given directories."""
-    
+
     dirs: list[Path] = []
     if explicit is not None:
         dirs.append(explicit if explicit.is_dir() else explicit.parent)
@@ -82,6 +109,7 @@ def _search_dirs(explicit: Optional[Path]) -> list[Path]:
             repo / "build-c-sdk" / "Debug",
             repo / "build" / "Release",
             repo / "build" / "Debug",
+            repo / "build",
         ]
     )
 
@@ -99,13 +127,22 @@ def _search_dirs(explicit: Optional[Path]) -> list[Path]:
 def find_library(path: Optional[str | Path] = None) -> Path:
     """Resolve the shared library path.
 
-    Search order: explicit path / ``COMETTEXTEL_LIB`` / cwd / common build &
-    artifact folders next to this package.
+    Search order: explicit path / ``COMETTEXTEL_LIB`` (file or directory) /
+    cwd / common build & artifact folders next to this package.
     """
 
     explicit: Optional[Path] = Path(path) if path else None
-    if explicit is not None and explicit.is_file():
+    if explicit is not None and _is_usable_lib(explicit):
         return explicit.resolve()
+
+    # Prefer COMETTEXTEL_LIB when it already points at a shared library file
+    # (e.g. libcomettextel.so.1.3.0 from the staged Linux C SDK).
+    if explicit is None:
+        env = os.environ.get("COMETTEXTEL_LIB")
+        if env:
+            env_path = Path(env)
+            if _is_usable_lib(env_path):
+                return env_path.resolve()
 
     names = _candidate_names()
     for directory in _search_dirs(explicit):
@@ -113,8 +150,12 @@ def find_library(path: Optional[str | Path] = None) -> Path:
             continue
         for name in names:
             candidate = directory / name
-            if candidate.is_file():
+            if _is_usable_lib(candidate):
                 return candidate.resolve()
+        # Fall back to versioned sonames (libcomettextel.so.1.3.0, …).
+        versioned = _glob_libs_in(directory)
+        if versioned:
+            return versioned[0].resolve()
 
     raise FileNotFoundError(
         "comettextel shared library not found. Set COMETTEXTEL_LIB to the DLL/SO "
