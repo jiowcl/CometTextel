@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "comettextel"
+version = "1.2.0"
+description = "Thin ctypes FFI for the CometTextel C ABI (PDU encode/decode)."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Ji-Feng Tsai", email = "jiowcl@gmail.com" }]
+keywords = ["sms", "pdu", "gsm", "comettextel"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["comettextel*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,34 @@
+"""CometTextel — thin Python FFI for the C ABI (PDU helpers).
+
+Requires the shared library from the C SDK (`comettextel.dll` / `libcomettextel.so`).
+Does not reimplement PDU codecs.
+"""
+
+from __future__ import annotations
+
+from .errors import CometTextelError, Status
+from .pdu import (
+    DCS_8BIT,
+    DCS_GSM7,
+    DCS_UCS2,
+    Message,
+    decode,
+    encode_submit,
+    encode_submit_segments,
+    status_string,
+)
+
+__all__ = [
+    "CometTextelError",
+    "Status",
+    "DCS_GSM7",
+    "DCS_8BIT",
+    "DCS_UCS2",
+    "Message",
+    "decode",
+    "encode_submit",
+    "encode_submit_segments",
+    "status_string",
+]
+
+__version__ = "1.2.0"
