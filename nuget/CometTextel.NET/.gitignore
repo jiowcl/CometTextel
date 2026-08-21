@@ -2,6 +2,8 @@ bin/
 obj/
 artifacts/
 **/Lib/comettextel.dll
+**/Lib/win-x64/
+**/Lib/linux-x64/
 .vs/
 *.user
 *.nupkg

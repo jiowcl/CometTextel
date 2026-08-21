@@ -1,20 +1,20 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net8.0-windows;net9.0-windows;net10.0-windows</TargetFrameworks>
+    <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
     <Company>Inwazy Technology</Company>
     <Copyright>Ji-Feng Tsai</Copyright>
-    <Description>.NET 8/9/10 Windows x64 wrapper for CometTextel (comettextel.dll): GSM SMS over serial via P/Invoke C ABI — send, list, delete, and PDU helpers.</Description>
-    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <Description>.NET 8/9/10 x64 wrapper for CometTextel (win-x64 + linux-x64 native RID assets): GSM SMS over serial via P/Invoke C ABI — send, list, delete, and PDU helpers.</Description>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <PackageId>CometTextel.NET</PackageId>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <RepositoryUrl>https://github.com/jiowcl/CometTextel</RepositoryUrl>
-    <PackageReleaseNotes>1.4.0: GSM 7-bit uses full GSM 03.38 default alphabet + ESC extension (UTF-8 in/out; ESC chars count as two septets).</PackageReleaseNotes>
-    <PackageTags>comettextel;sms;gsm;pdu;modem;serial;pinvoke;windows;x64</PackageTags>
+    <PackageReleaseNotes>1.5.0: NuGet ships win-x64 and linux-x64 RID natives (comettextel.dll / libcomettextel.so); TFMs are net8.0/net9.0/net10.0.</PackageReleaseNotes>
+    <PackageTags>comettextel;sms;gsm;pdu;modem;serial;pinvoke;windows;linux;x64</PackageTags>
     <Authors>Jiowcl</Authors>
     <PackageProjectUrl>https://github.com/jiowcl/CometTextel</PackageProjectUrl>
     <Platforms>AnyCPU;x64</Platforms>
-    <Version>1.4.0</Version>
+    <Version>1.5.0</Version>
     <PlatformTarget>x64</PlatformTarget>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
     <PackageReadmeFile>README.md</PackageReadmeFile>
@@ -49,17 +49,31 @@
     </None>
   </ItemGroup>
 
+  <!-- win-x64: pack RID asset; also copy next to output for ProjectReference / tests on Windows. -->
   <ItemGroup>
-    <!-- Copied by pack.ps1 from the C++ Release build. Pack requires the file (see EnsureNativeDll). -->
-    <None Include="Lib\comettextel.dll" Condition="Exists('Lib\comettextel.dll')" Pack="true" PackagePath="runtimes/win-x64/native/comettextel.dll">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    <None Include="Lib\win-x64\comettextel.dll" Condition="Exists('Lib\win-x64\comettextel.dll')" Pack="true" PackagePath="runtimes/win-x64/native/comettextel.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <TargetPath>comettextel.dll</TargetPath>
       <Link>comettextel.dll</Link>
     </None>
+    <!-- Backward-compatible path used by older scripts; prefer Lib/win-x64. -->
+    <None Include="Lib\comettextel.dll" Condition="!Exists('Lib\win-x64\comettextel.dll') And Exists('Lib\comettextel.dll')" Pack="true" PackagePath="runtimes/win-x64/native/comettextel.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>comettextel.dll</TargetPath>
+      <Link>comettextel.dll</Link>
+    </None>
+    <None Include="Lib\linux-x64\libcomettextel.so" Condition="Exists('Lib\linux-x64\libcomettextel.so')" Pack="true" PackagePath="runtimes/linux-x64/native/libcomettextel.so" />
   </ItemGroup>
 
   <Target Name="EnsureNativeDll" BeforeTargets="GenerateNuspec;Pack">
-    <Error Condition="!Exists('$(MSBuildProjectDirectory)\Lib\comettextel.dll')" Text="Missing Lib\comettextel.dll. Run nuget\CometTextel.NET\pack.ps1 (or copy a win-x64 Release build) before packing." />
+    <PropertyGroup>
+      <_WinDll Condition="Exists('$(MSBuildProjectDirectory)\Lib\win-x64\comettextel.dll')">$(MSBuildProjectDirectory)\Lib\win-x64\comettextel.dll</_WinDll>
+      <_WinDll Condition="'$(_WinDll)' == '' And Exists('$(MSBuildProjectDirectory)\Lib\comettextel.dll')">$(MSBuildProjectDirectory)\Lib\comettextel.dll</_WinDll>
+      <_LinuxSo>$(MSBuildProjectDirectory)\Lib\linux-x64\libcomettextel.so</_LinuxSo>
+    </PropertyGroup>
+    <Error Condition="'$(_WinDll)' == ''" Text="Missing win-x64 native. Place comettextel.dll in Lib\win-x64\ (or Lib\) via pack.ps1 / CI before packing." />
+    <Error Condition="'$(CometTextelRequireLinuxNative)' == 'true' And !Exists('$(_LinuxSo)')" Text="Missing linux-x64 native. Place libcomettextel.so in Lib\linux-x64\ before packing (set by CI pack-nuget job)." />
+    <Warning Condition="!Exists('$(_LinuxSo)')" Text="Packing without Lib\linux-x64\libcomettextel.so — nupkg will be win-x64 only. Full CI sets CometTextelRequireLinuxNative=true." />
   </Target>
 
 </Project>

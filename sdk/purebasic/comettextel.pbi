@@ -1,5 +1,5 @@
 ;--------------------------------------------------------------------------------------------
-;  CometTextel — thin PureBasic FFI for the C ABI (PDU helpers).
+;  CometTextel — thin PureBasic FFI for the C ABI (PDU + modem).
 ;
 ;  Windows x64: OpenLibrary + PrototypeC (cdecl). Runtime-loads comettextel.dll
 ;  from the C SDK — no import library / lld-link step.
@@ -50,6 +50,12 @@ Structure CtMessage Align #PB_Structure_AlignC
 EndStructure
 
 PrototypeC.i Proto_ct_status_string(status.l)
+PrototypeC.i Proto_ct_modem_create()
+PrototypeC Proto_ct_modem_destroy(*modem)
+PrototypeC.l Proto_ct_modem_open(*modem, *port, baudRate.l)
+PrototypeC.l Proto_ct_modem_send(*modem, *smsc, *destination, *text, dcs.l, timeoutMs.l)
+PrototypeC.l Proto_ct_modem_list(*modem, *outMessages, maxCount.l, *outCount, timeoutMs.l)
+PrototypeC.l Proto_ct_modem_delete(*modem, index.l, timeoutMs.l)
 PrototypeC.l Proto_ct_pdu_encode_submit(*smsc, *destination, *text, dcs.l, *out_hex, out_hex_cap.i)
 PrototypeC.l Proto_ct_pdu_encode_submit_segments(*smsc, *destination, *text, dcs.l, *out_hex, out_hex_cap.i, *out_count)
 PrototypeC.l Proto_ct_pdu_decode(*pdu_hex, *out)
@@ -66,6 +72,12 @@ Global CtLib.i = 0
 Global CtLoadError.s = ""
 Global CtLoadedPath.s = ""
 Global ct_status_string.Proto_ct_status_string
+Global ct_modem_create.Proto_ct_modem_create
+Global ct_modem_destroy.Proto_ct_modem_destroy
+Global ct_modem_open.Proto_ct_modem_open
+Global ct_modem_send.Proto_ct_modem_send
+Global ct_modem_list.Proto_ct_modem_list
+Global ct_modem_delete.Proto_ct_modem_delete
 Global ct_pdu_encode_submit.Proto_ct_pdu_encode_submit
 Global ct_pdu_encode_submit_segments.Proto_ct_pdu_encode_submit_segments
 Global ct_pdu_decode.Proto_ct_pdu_decode
@@ -166,6 +178,30 @@ Procedure.i CtInit(dllPath.s = "comettextel.dll")
 
   ct_status_string = *fn
 
+  *fn = CtBindExport("ct_modem_create")
+  If *fn = 0 : FreeLibrary(CtLib) : CtLib = 0 : ProcedureReturn 0 : EndIf
+  ct_modem_create = *fn
+
+  *fn = CtBindExport("ct_modem_destroy")
+  If *fn = 0 : FreeLibrary(CtLib) : CtLib = 0 : ProcedureReturn 0 : EndIf
+  ct_modem_destroy = *fn
+
+  *fn = CtBindExport("ct_modem_open")
+  If *fn = 0 : FreeLibrary(CtLib) : CtLib = 0 : ProcedureReturn 0 : EndIf
+  ct_modem_open = *fn
+
+  *fn = CtBindExport("ct_modem_send")
+  If *fn = 0 : FreeLibrary(CtLib) : CtLib = 0 : ProcedureReturn 0 : EndIf
+  ct_modem_send = *fn
+
+  *fn = CtBindExport("ct_modem_list")
+  If *fn = 0 : FreeLibrary(CtLib) : CtLib = 0 : ProcedureReturn 0 : EndIf
+  ct_modem_list = *fn
+
+  *fn = CtBindExport("ct_modem_delete")
+  If *fn = 0 : FreeLibrary(CtLib) : CtLib = 0 : ProcedureReturn 0 : EndIf
+  ct_modem_delete = *fn
+
   *fn = CtBindExport("ct_pdu_encode_submit")
 
   If *fn = 0
@@ -193,6 +229,7 @@ Procedure.i CtInit(dllPath.s = "comettextel.dll")
     
     ProcedureReturn 0
   EndIf
+  
   ct_pdu_decode = *fn
 
   ProcedureReturn 1
@@ -209,6 +246,12 @@ Procedure CtShutdown()
   EndIf
 
   ct_status_string = 0
+  ct_modem_create = 0
+  ct_modem_destroy = 0
+  ct_modem_open = 0
+  ct_modem_send = 0
+  ct_modem_list = 0
+  ct_modem_delete = 0
   ct_pdu_encode_submit = 0
   ct_pdu_encode_submit_segments = 0
   ct_pdu_decode = 0
@@ -463,6 +506,142 @@ Procedure.l CtDecode(pduHex.s, *out.CtMessage)
   FreeMemory(*hex)
   
   ProcedureReturn result
+EndProcedure
+
+; <summary>
+; CtModemCreate - Opaque ct_modem* handle (0 on failure).
+; </summary>
+; <returns>Returns integer.</returns>
+Procedure.i CtModemCreate()
+  If CtLib = 0
+    ProcedureReturn 0
+  EndIf
+
+  ProcedureReturn ct_modem_create()
+EndProcedure
+
+; <summary>
+; CtModemDestroy
+; </summary>
+; <param name="*modem">Pointer</param>
+; <returns>Returns void.</returns>
+Procedure CtModemDestroy(*modem)
+  If CtLib = 0 Or *modem = 0
+    ProcedureReturn
+  EndIf
+
+  ct_modem_destroy(*modem)
+EndProcedure
+
+; <summary>
+; CtModemOpen
+; </summary>
+; <param name="*modem">Pointer</param>
+; <param name="baudRate">long</param>
+; <returns>Returns long.</returns>
+Procedure.l CtModemOpen(*modem, port.s, baudRate.l = 115200)
+  Protected *port
+  Protected result.l
+
+  If CtLib = 0 Or *modem = 0
+    ProcedureReturn #CT_ERR_NOT_OPEN
+  EndIf
+
+  *port = CtUtf8Dup(port)
+
+  If *port = 0
+    ProcedureReturn #CT_ERR_UNKNOWN
+  EndIf
+
+  result = ct_modem_open(*modem, *port, baudRate)
+
+  FreeMemory(*port)
+  ProcedureReturn result
+EndProcedure
+
+; <summary>
+; CtModemSend - Long text auto-splits with concat UDH.
+; </summary>
+; <param name="*modem">Pointer</param>
+; <param name="destination">string</param>
+; <param name="text">string</param>
+; <param name="serviceCenter">string</param>
+; <param name="dcs">long</param>
+; <param name="timeoutMs">long</param>
+; <returns>Returns long.</returns>
+Procedure.l CtModemSend(*modem, destination.s, text.s, serviceCenter.s = "", dcs.l = #CT_DCS_UCS2, timeoutMs.l = 10000)
+  Protected *smsc
+  Protected *dest
+  Protected *body
+  Protected result.l
+
+  If CtLib = 0 Or *modem = 0
+    ProcedureReturn #CT_ERR_NOT_OPEN
+  EndIf
+
+  *smsc = CtUtf8Dup(serviceCenter)
+  *dest = CtUtf8Dup(destination)
+  *body = CtUtf8Dup(text)
+
+  If *smsc = 0 Or *dest = 0 Or *body = 0
+    If *smsc : FreeMemory(*smsc) : EndIf
+    If *dest : FreeMemory(*dest) : EndIf
+    If *body : FreeMemory(*body) : EndIf
+    ProcedureReturn #CT_ERR_UNKNOWN
+  EndIf
+
+  result = ct_modem_send(*modem, *smsc, *dest, *body, dcs, timeoutMs)
+
+  FreeMemory(*smsc)
+  FreeMemory(*dest)
+  FreeMemory(*body)
+  ProcedureReturn result
+EndProcedure
+
+; <summary>
+; CtModemList - Fills *outMessages (array of CtMessage). Returns status; *outCount receives count.
+; Complete concat sets are rejoined (concat_seq = 0).
+; </summary>
+; <param name="*modem">Pointer</param>
+; <param name="*outMessages">struct</param>
+; <param name="*outCount">long</param>
+; <param name="timeoutMs">long</param>
+; <returns>Returns long.</returns>
+Procedure.l CtModemList(*modem, *outMessages.CtMessage, maxCount.l, *outCount.Long, timeoutMs.l = 8000)
+  Protected count.l
+  Protected result.l
+
+  If CtLib = 0 Or *modem = 0
+    ProcedureReturn #CT_ERR_NOT_OPEN
+  EndIf
+
+  If *outMessages = 0 Or maxCount <= 0
+    ProcedureReturn #CT_ERR_INVALID_ARGUMENT
+  EndIf
+
+  count = 0
+  result = ct_modem_list(*modem, *outMessages, maxCount, @count, timeoutMs)
+
+  If *outCount
+    *outCount\l = count
+  EndIf
+
+  ProcedureReturn result
+EndProcedure
+
+; <summary>
+; CtModemDelete
+; </summary>
+; <param name="*modem">Pointer</param>
+; <param name="index">long</param>
+; <param name="timeoutMs">long</param>
+; <returns>Returns long.</returns>
+Procedure.l CtModemDelete(*modem, index.l, timeoutMs.l = 5000)
+  If CtLib = 0 Or *modem = 0
+    ProcedureReturn #CT_ERR_NOT_OPEN
+  EndIf
+
+  ProcedureReturn ct_modem_delete(*modem, index, timeoutMs)
 EndProcedure
 
 ; IDE Options = PureBasic 6.41 (Windows - x64)

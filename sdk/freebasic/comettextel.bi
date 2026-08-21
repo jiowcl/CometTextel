@@ -1,5 +1,5 @@
 /'--------------------------------------------------------------------------------------------
- '  CometTextel — thin FreeBASIC FFI for the C ABI (PDU helpers).
+ '  CometTextel — thin FreeBASIC FFI for the C ABI (PDU + modem).
  '
  '  Windows x64: DyLibLoad + cdecl function pointers. Runtime-loads comettextel.dll
  '  from the C SDK — no import library step.
@@ -58,6 +58,33 @@ Type CtMessage
 End Type
 
 Type CtStatusStringFn As Function CDecl (ByVal status As Long) As ZString Ptr
+Type CtModemCreateFn As Function CDecl () As Any Ptr
+Type CtModemDestroyFn As Sub CDecl (ByVal modem As Any Ptr)
+Type CtModemOpenFn As Function CDecl ( _
+	ByVal modem As Any Ptr, _
+	ByVal port As ZString Ptr, _
+	ByVal baudRate As ULong _
+	) As Long
+Type CtModemSendFn As Function CDecl ( _
+	ByVal modem As Any Ptr, _
+	ByVal smsc As ZString Ptr, _
+	ByVal destination As ZString Ptr, _
+	ByVal text As ZString Ptr, _
+	ByVal dcs As Long, _
+	ByVal timeoutMs As Long _
+	) As Long
+Type CtModemListFn As Function CDecl ( _
+	ByVal modem As Any Ptr, _
+	ByVal outMessages As CtMessage Ptr, _
+	ByVal maxCount As Long, _
+	ByVal outCount As Long Ptr, _
+	ByVal timeoutMs As Long _
+	) As Long
+Type CtModemDeleteFn As Function CDecl ( _
+	ByVal modem As Any Ptr, _
+	ByVal index As Long, _
+	ByVal timeoutMs As Long _
+	) As Long
 Type CtPduEncodeSubmitFn As Function CDecl ( _
 	ByVal smsc As ZString Ptr, _
 	ByVal destination As ZString Ptr, _
@@ -84,6 +111,12 @@ Dim Shared CtLib As Any Ptr = 0
 Dim Shared CtLoadError As String
 Dim Shared CtLoadedPath As String
 Dim Shared ct_status_string As CtStatusStringFn = 0
+Dim Shared ct_modem_create As CtModemCreateFn = 0
+Dim Shared ct_modem_destroy As CtModemDestroyFn = 0
+Dim Shared ct_modem_open As CtModemOpenFn = 0
+Dim Shared ct_modem_send As CtModemSendFn = 0
+Dim Shared ct_modem_list As CtModemListFn = 0
+Dim Shared ct_modem_delete As CtModemDeleteFn = 0
 Dim Shared ct_pdu_encode_submit As CtPduEncodeSubmitFn = 0
 Dim Shared ct_pdu_encode_submit_segments As CtPduEncodeSubmitSegmentsFn = 0
 Dim Shared ct_pdu_decode As CtPduDecodeFn = 0
@@ -239,6 +272,24 @@ Function CtInit(ByRef dllPath As String = "comettextel.dll") As Long
 		Return 0
 	End If
 
+	ct_modem_create = Cast(CtModemCreateFn, CtBindExport("ct_modem_create"))
+	If ct_modem_create = 0 Then DyLibFree(CtLib) : CtLib = 0 : Return 0
+
+	ct_modem_destroy = Cast(CtModemDestroyFn, CtBindExport("ct_modem_destroy"))
+	If ct_modem_destroy = 0 Then DyLibFree(CtLib) : CtLib = 0 : Return 0
+
+	ct_modem_open = Cast(CtModemOpenFn, CtBindExport("ct_modem_open"))
+	If ct_modem_open = 0 Then DyLibFree(CtLib) : CtLib = 0 : Return 0
+
+	ct_modem_send = Cast(CtModemSendFn, CtBindExport("ct_modem_send"))
+	If ct_modem_send = 0 Then DyLibFree(CtLib) : CtLib = 0 : Return 0
+
+	ct_modem_list = Cast(CtModemListFn, CtBindExport("ct_modem_list"))
+	If ct_modem_list = 0 Then DyLibFree(CtLib) : CtLib = 0 : Return 0
+
+	ct_modem_delete = Cast(CtModemDeleteFn, CtBindExport("ct_modem_delete"))
+	If ct_modem_delete = 0 Then DyLibFree(CtLib) : CtLib = 0 : Return 0
+
 	ct_pdu_encode_submit = Cast(CtPduEncodeSubmitFn, CtBindExport("ct_pdu_encode_submit"))
 
 	If ct_pdu_encode_submit = 0 Then
@@ -274,6 +325,12 @@ Sub CtShutdown()
 	End If
 
 	ct_status_string = 0
+	ct_modem_create = 0
+	ct_modem_destroy = 0
+	ct_modem_open = 0
+	ct_modem_send = 0
+	ct_modem_list = 0
+	ct_modem_delete = 0
 	ct_pdu_encode_submit = 0
 	ct_pdu_encode_submit_segments = 0
 	ct_pdu_decode = 0
@@ -445,6 +502,109 @@ Function CtEncodeSubmitSegmentsW( _
 
 	Return CtEncodeSubmitSegments( _
 		CtUtf8FromW(destination), CtUtf8FromW(text), CtUtf8FromW(serviceCenter), dcs, pStatus, pOutCount)
+End Function
+
+' <summary>
+' CtModemCreate
+' </summary>
+' <returns>Returns Any Ptr.</returns>
+Function CtModemCreate() As Any Ptr
+	If CtLib = 0 OrElse ct_modem_create = 0 Then Return 0
+
+	Return ct_modem_create()
+End Function
+
+' <summary>
+' CtModemDestroy
+' </summary>
+' <param name="modem">Any Ptr</param>
+' <returns>Returns void.</returns>
+Sub CtModemDestroy(ByVal modem As Any Ptr)
+	If CtLib = 0 OrElse modem = 0 OrElse ct_modem_destroy = 0 Then Return
+
+	ct_modem_destroy(modem)
+End Sub
+
+' <summary>
+' CtModemOpen
+' </summary>
+' <param name="modem">Any Ptr</param>
+' <param name="port">String</param>
+' <param name="baudRate">ULong</param>
+' <returns>Returns Long.</returns>
+Function CtModemOpen(ByVal modem As Any Ptr, ByRef port As String, ByVal baudRate As ULong = 115200) As Long
+	If CtLib = 0 OrElse modem = 0 Then Return CT_ERR_NOT_OPEN
+	Dim As String p = port
+
+	Return ct_modem_open(modem, StrPtr(p), baudRate)
+End Function
+
+' <summary>
+' CtModemSend
+' </summary>
+' <param name="modem">Any Ptr</param>
+' <param name="destination">String</param>
+' <param name="text">String</param>
+' <param name="serviceCenter">String</param>
+' <param name="dcs">Long</param>
+' <param name="timeoutMs">Long</param>
+' <returns>Returns Long.</returns>
+Function CtModemSend( _
+	ByVal modem As Any Ptr, _
+	ByRef destination As String, _
+	ByRef text As String, _
+	ByRef serviceCenter As String = "", _
+	ByVal dcs As Long = CT_DCS_UCS2, _
+	ByVal timeoutMs As Long = 10000 _
+	) As Long
+
+	If CtLib = 0 OrElse modem = 0 Then Return CT_ERR_NOT_OPEN
+
+	Dim As String smsc = serviceCenter
+	Dim As String dest = destination
+	Dim As String body = text
+
+	Return ct_modem_send(modem, StrPtr(smsc), StrPtr(dest), StrPtr(body), dcs, timeoutMs)
+End Function
+
+' <summary>
+' CtModemList
+' </summary>
+' <param name="modem">Any Ptr</param>
+' <param name="outMessages">CtMessage Ptr</param>
+' <param name="maxCount">Long</param>
+' <param name="outCount">Long</param>
+' <param name="outCount">Long Ptr</param>
+' <param name="timeoutMs">Long</param>
+' <returns>Returns Long.</returns>
+Function CtModemList( _
+	ByVal modem As Any Ptr, _
+	ByVal outMessages As CtMessage Ptr, _
+	ByVal maxCount As Long, _
+	ByVal outCount As Long Ptr, _
+	ByVal timeoutMs As Long = 8000 _
+	) As Long
+
+	If CtLib = 0 OrElse modem = 0 Then Return CT_ERR_NOT_OPEN
+	If outMessages = 0 OrElse maxCount <= 0 Then Return CT_ERR_INVALID_ARGUMENT
+
+	Dim As Long count = 0
+	Dim As Long result = ct_modem_list(modem, outMessages, maxCount, @count, timeoutMs)
+	If outCount <> 0 Then *outCount = count
+
+	Return result
+End Function
+
+' <summary>
+' CtModemDelete
+' </summary>
+' <param name="modem">Any Ptr</param>
+' <param name="index">Long</param>
+' <param name="timeoutMs">Long</param>
+' <returns>Returns Long.</returns>
+Function CtModemDelete(ByVal modem As Any Ptr, ByVal index As Long, ByVal timeoutMs As Long = 5000) As Long
+	If CtLib = 0 OrElse modem = 0 Then Return CT_ERR_NOT_OPEN
+	Return ct_modem_delete(modem, index, timeoutMs)
 End Function
 
 #endif /' COMETTEXTEL_BI '/

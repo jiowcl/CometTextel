@@ -78,10 +78,13 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on every push and pull request 
 - **Windows (MSVC x64)**: configure, build, run CTest, upload `comettextel-windows-x64`  
   (`bin/comettextel.dll`, import/static libs, headers)  
 - **Windows C SDK**: upload `comettextel-c-sdk-windows-x64` (`c_api.h` + DLL/libs + `examples/c_api_example.c`)  
-- **Windows .NET**: PDU smoke tests (`CometTextel.NET.Tests`, including UCS-2 Chinese), then pack/upload `CometTextel.NET-nupkg`  
+- **Windows Python**: pytest + wheel artifact `comettextel-python-wheel-windows`  
+- **Windows .NET**: PDU smoke tests (`CometTextel.NET.Tests`)  
 - **Linux (GCC 14)**: configure, build, run CTest, upload `comettextel-linux-x64`  
   (`libcomettextel.so*`, `libcomettextel.a`, headers)  
 - **Linux C SDK**: upload `comettextel-c-sdk-linux-x64`  
+- **Linux Python**: pytest + wheel artifact `comettextel-python-wheel-linux`  
+- **Pack NuGet**: merges win-x64 + linux-x64 RID natives → `CometTextel.NET-nupkg`  
 
 Download build packages from the workflow **Artifacts** tab (retained 14 days).  
 
@@ -99,7 +102,7 @@ comettextel_c_api_example pdu 886912345678 "Hello" 886932000000
 
 CI / Release also publish focused **C SDK** artifacts (`comettextel-c-sdk-*`) with only `c_api.h`, shared/static libs, and the example source — see [`sdk/c/README.md`](sdk/c/README.md).  
 
-Optional language samples (thin FFI, same shared library; not built in CI compilers): [`sdk/python/`](sdk/python) (ctypes, PDU + modem; **pytest in CI**), [`sdk/purebasic/`](sdk/purebasic) (PDU; local `verify.ps1`), [`sdk/freebasic/`](sdk/freebasic) (PDU; local `verify.ps1`).  
+Optional language samples (thin FFI, same shared library): [`sdk/python/`](sdk/python) (ctypes, PDU + modem; **pytest + wheels in CI**), [`sdk/purebasic/`](sdk/purebasic) (PDU + modem; local `verify.ps1`), [`sdk/freebasic/`](sdk/freebasic) (PDU + modem; local `verify.ps1`).  
 
 ## .NET NuGet (optional)  
 
@@ -110,7 +113,7 @@ cd nuget/CometTextel.NET
 .\pack.ps1
 ```
 
-This builds `comettextel.dll` with the C ABI and produces `CometTextel.NET.*.nupkg`. See that folder’s README for Install-Package / Quick start.  
+This builds `comettextel.dll` with the C ABI and produces `CometTextel.NET.*.nupkg` (CI also embeds **linux-x64** `libcomettextel.so`). See that folder’s README for Install-Package / Quick start.  
 
 ## Install & find_package  
 
@@ -216,12 +219,12 @@ comettextel/
 ├── doc/                   # User guides
 ├── examples/              # Sample programs (+ c_api_example.c)
 ├── include/comettextel/   # Public headers (+ c_api.h)
-├── nuget/CometTextel.NET/ # Optional .NET NuGet wrapper (P/Invoke)
+├── nuget/CometTextel.NET/ # Optional .NET NuGet wrapper (P/Invoke; win+linux RID)
 ├── scripts/               # CI helpers (e.g. stage_c_sdk)
 ├── sdk/c/                 # C SDK package README template
-├── sdk/python/            # Optional Python ctypes PDU + modem sample (not in CI)
-├── sdk/purebasic/         # Optional PureBasic PDU sample (not in CI)
-├── sdk/freebasic/         # Optional FreeBASIC PDU sample (not in CI)
+├── sdk/python/            # Python ctypes PDU + modem (pytest + wheels in CI)
+├── sdk/purebasic/         # PureBasic PDU + modem sample (local verify.ps1)
+├── sdk/freebasic/         # FreeBASIC PDU + modem sample (local verify.ps1)
 ├── src/                   # Library sources
 │   └── serial/            # Win32 / POSIX backends
 ├── tests/                 # Unit tests (CTest)

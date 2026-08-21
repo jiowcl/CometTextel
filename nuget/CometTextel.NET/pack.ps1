@@ -1,17 +1,21 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-  Build comettextel.dll (C ABI) and pack CometTextel.NET.
+  Build comettextel.dll (C ABI) and pack CometTextel.NET (win-x64; optional linux-x64).
 #>
 param(
     [string]$Configuration = "Release",
-    [string]$Platform = "x64"
+    [string]$Platform = "x64",
+    [string]$LinuxSoPath = "",
+    [switch]$RequireLinuxNative
 )
 
 $ErrorActionPreference = "Stop"
 $NugetRoot = $PSScriptRoot                                      # comettextel/nuget/CometTextel.NET
 $Root = (Resolve-Path (Join-Path $NugetRoot "..\..")).Path      # comettextel/
 $LibDir = Join-Path $NugetRoot "CometTextel.NET\Lib"
+$WinLibDir = Join-Path $LibDir "win-x64"
+$LinuxLibDir = Join-Path $LibDir "linux-x64"
 $BuildDir = Join-Path $Root "build-nuget"
 $Artifacts = Join-Path $NugetRoot "artifacts"
 
@@ -32,19 +36,25 @@ if (-not (Test-Path $dll)) {
     throw "Native DLL not found: $dll"
 }
 
-New-Item -ItemType Directory -Force -Path $LibDir | Out-Null
+New-Item -ItemType Directory -Force -Path $WinLibDir | Out-Null
+Copy-Item $dll (Join-Path $WinLibDir "comettextel.dll") -Force
+# Keep legacy path for older scripts / docs.
 Copy-Item $dll (Join-Path $LibDir "comettextel.dll") -Force
-Write-Host "==> Copied $dll -> Lib\comettextel.dll"
+Write-Host "==> Copied $dll -> Lib\win-x64\comettextel.dll"
+
+if ($LinuxSoPath) {
+    if (-not (Test-Path $LinuxSoPath)) {
+        throw "Linux SO not found: $LinuxSoPath"
+    }
+    New-Item -ItemType Directory -Force -Path $LinuxLibDir | Out-Null
+    Copy-Item $LinuxSoPath (Join-Path $LinuxLibDir "libcomettextel.so") -Force
+    Write-Host "==> Copied $LinuxSoPath -> Lib\linux-x64\libcomettextel.so"
+}
 
 Write-Host "==> Test native library"
 ctest --test-dir $BuildDir -C $Configuration --output-on-failure
 if ($LASTEXITCODE -ne 0) {
     throw "ctest failed"
-}
-
-$libDll = Join-Path $LibDir "comettextel.dll"
-if (-not (Test-Path $libDll)) {
-    throw "Lib DLL missing before pack: $libDll"
 }
 
 Write-Host "==> .NET PDU smoke tests"
@@ -64,13 +74,20 @@ if ($LASTEXITCODE -ne 0) {
     throw "dotnet build (pack prep) failed"
 }
 
+$packArgs = @(
+    "pack", $PackProj,
+    "-c", $Configuration,
+    "-p:Platform=$Platform",
+    "-o", $Artifacts,
+    "--no-build"
+)
+if ($RequireLinuxNative) {
+    $packArgs += "-p:CometTextelRequireLinuxNative=true"
+}
+
 Write-Host "==> Pack NuGet"
 New-Item -ItemType Directory -Force -Path $Artifacts | Out-Null
-dotnet pack $PackProj `
-    -c $Configuration `
-    -p:Platform=$Platform `
-    -o $Artifacts `
-    --no-build
+dotnet @packArgs
 if ($LASTEXITCODE -ne 0) {
     throw "dotnet pack failed"
 }

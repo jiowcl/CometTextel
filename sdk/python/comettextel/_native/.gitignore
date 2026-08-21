@@ -1,0 +1,7 @@
+# Staged wheel natives (do not commit)
+win_amd64/
+linux_x86_64/
+*.dll
+*.so
+*.so.*
+!README.md

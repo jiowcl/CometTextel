@@ -38,8 +38,9 @@ Search order:
 
 1. Explicit path passed to `comettextel.pdu.load_library(...)`
 2. Environment variable **`COMETTEXTEL_LIB`** (shared-library **file** or a directory containing it — including versioned Linux sonames such as `libcomettextel.so.1.3.0`)
-3. Current working directory
-4. Nearby build / artifact folders (`build-c-sdk/Release`, `artifact/comettextel-c-sdk-*/…`)
+3. Wheel-embedded `_native/<platform>/` (CI platform wheels)
+4. Current working directory
+5. Nearby build / artifact folders (`build-c-sdk/Release`, `artifact/comettextel-c-sdk-*/…`)
 
 ```powershell
 # Windows
@@ -50,6 +51,27 @@ $env:COMETTEXTEL_LIB = "D:\path\to\comettextel.dll"
 # Linux
 export COMETTEXTEL_LIB=/path/to/libcomettextel.so
 ```
+
+## Wheels
+
+CI builds platform wheels that **embed** the matching C ABI shared library:
+
+| Artifact | Tag |
+|----------|-----|
+| `comettextel-python-wheel-windows` | `win_amd64` |
+| `comettextel-python-wheel-linux` | `linux_x86_64` |
+
+Local pack (after a C SDK stage):
+
+```powershell
+python sdk/python/scripts/stage_native.py --from artifact/comettextel-c-sdk-windows-x64
+python -m pip install build
+python -m build --wheel --outdir dist sdk/python
+python sdk/python/scripts/stage_native.py --clean
+pip install dist/comettextel-*.whl
+```
+
+Editable / source installs without a staged `_native` still need `COMETTEXTEL_LIB` or a nearby build.
 
 ## PDU example
 

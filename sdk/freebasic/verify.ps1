@@ -82,10 +82,13 @@ Push-Location $Root
 try {
     & $fbc -x $exe "pdu_example.bas"
     if ($LASTEXITCODE -ne 0) { throw "fbc failed with exit $LASTEXITCODE" }
+    $modemExe = Join-Path $outDir "modem_example.exe"
+    & $fbc -x $modemExe "modem_example.bas"
+    if ($LASTEXITCODE -ne 0) { throw "fbc (modem_example) failed with exit $LASTEXITCODE" }
 } finally {
     Pop-Location
 }
 
-Write-Host "Running self-check..."
+Write-Host "Running PDU self-check..."
 & $exe
 exit $LASTEXITCODE

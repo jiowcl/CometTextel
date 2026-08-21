@@ -4,16 +4,16 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "comettextel"
-version = "1.4.0"
+version = "1.5.0"
 description = "Thin ctypes FFI for the CometTextel C ABI (PDU + GSM modem)."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = "MIT"
 authors = [{ name = "Ji-Feng Tsai", email = "jiowcl@gmail.com" }]
 keywords = ["sms", "pdu", "gsm", "comettextel"]
 
 [project.optional-dependencies]
-dev = ["pytest>=7"]
+dev = ["pytest>=7", "build>=1.0"]
 
 [project.urls]
 Homepage = "https://inwazy.com"
@@ -23,6 +23,9 @@ Issues = "https://github.com/jiowcl/CometTextel/issues"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["comettextel*"]
+
+[tool.setuptools.package-data]
+comettextel = ["_native/**/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

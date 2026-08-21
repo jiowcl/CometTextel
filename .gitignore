@@ -27,4 +27,7 @@ compile_commands.json
 # Local SDK native copies / build outputs
 sdk/**/comettextel.dll
 sdk/**/libcomettextel.so*
+sdk/python/setup.cfg
+sdk/python/build/
+sdk/python/*.egg-info/
 .tools/

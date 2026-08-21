@@ -78,33 +78,38 @@ jobs:
           python -m pip install pytest
           python -m pytest sdk/python -q
 
+      - name: Python wheel (win_amd64)
+        shell: pwsh
+        run: |
+          python -m pip install build
+          python sdk/python/scripts/stage_native.py --from artifact/comettextel-c-sdk-windows-x64
+          New-Item -ItemType Directory -Force -Path artifact/wheels | Out-Null
+          python -m build --wheel --outdir artifact/wheels sdk/python
+          python sdk/python/scripts/stage_native.py --clean
+
+      - name: Upload Python wheel (Windows)
+        uses: actions/upload-artifact@v4
+        with:
+          name: comettextel-python-wheel-windows
+          path: artifact/wheels/*.whl
+          if-no-files-found: error
+          retention-days: 14
+
       - name: .NET PDU smoke tests
         shell: pwsh
         run: |
           $lib = "nuget/CometTextel.NET/CometTextel.NET/Lib"
-          New-Item -ItemType Directory -Force -Path $lib | Out-Null
+          New-Item -ItemType Directory -Force -Path "$lib/win-x64" | Out-Null
+          Copy-Item "build/Release/comettextel.dll" "$lib/win-x64/comettextel.dll" -Force
           Copy-Item "build/Release/comettextel.dll" "$lib/comettextel.dll" -Force
           dotnet test "nuget/CometTextel.NET/CometTextel.NET.Tests/CometTextel.NET.Tests.csproj" `
             -c Release -p:Platform=x64 --verbosity normal
 
-      - name: Pack NuGet
-        shell: pwsh
-        run: |
-          # Smoke tests only build net8.0 for ProjectReference; rebuild all TFMs before pack (NU5026).
-          $proj = "nuget/CometTextel.NET/CometTextel.NET/CometTextel.NET.csproj"
-          $lib = "nuget/CometTextel.NET/CometTextel.NET/Lib"
-          New-Item -ItemType Directory -Force -Path $lib | Out-Null
-          Copy-Item "build/Release/comettextel.dll" "$lib/comettextel.dll" -Force
-          New-Item -ItemType Directory -Force -Path "artifact/nuget" | Out-Null
-          dotnet build $proj -c Release -p:Platform=x64
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          dotnet pack $proj -c Release -p:Platform=x64 -o artifact/nuget --no-build
-
-      - name: Upload NuGet package
+      - name: Upload NuGet win-x64 native
         uses: actions/upload-artifact@v4
         with:
-          name: CometTextel.NET-nupkg
-          path: artifact/nuget/*.nupkg
+          name: nuget-native-win-x64
+          path: nuget/CometTextel.NET/CometTextel.NET/Lib/win-x64/comettextel.dll
           if-no-files-found: error
           retention-days: 14
 
@@ -175,8 +180,6 @@ jobs:
         run: |
           set -euo pipefail
           libdir="artifact/comettextel-c-sdk-linux-x64/lib"
-          # Prefer unversioned .so; fall back to any libcomettextel.so* (stage may
-          # only copy the real soname file without symlinks).
           if [[ -e "$libdir/libcomettextel.so" ]]; then
             so="$libdir/libcomettextel.so"
           else
@@ -188,3 +191,85 @@ jobs:
           echo "COMETTEXTEL_LIB=$COMETTEXTEL_LIB"
           python3 -m pip install --user pytest
           python3 -m pytest sdk/python -q
+
+      - name: Python wheel (linux_x86_64)
+        run: |
+          set -euo pipefail
+          python3 -m pip install --user build
+          python3 sdk/python/scripts/stage_native.py --from artifact/comettextel-c-sdk-linux-x64
+          mkdir -p artifact/wheels
+          python3 -m build --wheel --outdir artifact/wheels sdk/python
+          python3 sdk/python/scripts/stage_native.py --clean
+
+      - name: Upload Python wheel (Linux)
+        uses: actions/upload-artifact@v4
+        with:
+          name: comettextel-python-wheel-linux
+          path: artifact/wheels/*.whl
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Stage NuGet linux-x64 native
+        run: |
+          set -euo pipefail
+          mkdir -p nuget-native-linux-x64
+          libdir="artifact/comettextel-c-sdk-linux-x64/lib"
+          if [[ -e "$libdir/libcomettextel.so" ]]; then
+            cp -L "$libdir/libcomettextel.so" nuget-native-linux-x64/libcomettextel.so
+          else
+            so="$(find "$libdir" -maxdepth 1 -type f -name 'libcomettextel.so*' | sort | head -n 1)"
+            cp -L "$so" nuget-native-linux-x64/libcomettextel.so
+          fi
+          test -f nuget-native-linux-x64/libcomettextel.so
+          ls -la nuget-native-linux-x64
+
+      - name: Upload NuGet linux-x64 native
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-native-linux-x64
+          path: nuget-native-linux-x64/libcomettextel.so
+          if-no-files-found: error
+          retention-days: 14
+
+  pack-nuget:
+    name: Pack NuGet (win-x64 + linux-x64)
+    needs: [windows-msvc, linux-gcc]
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download win-x64 native
+        uses: actions/download-artifact@v4
+        with:
+          name: nuget-native-win-x64
+          path: nuget/CometTextel.NET/CometTextel.NET/Lib/win-x64
+
+      - name: Download linux-x64 native
+        uses: actions/download-artifact@v4
+        with:
+          name: nuget-native-linux-x64
+          path: nuget/CometTextel.NET/CometTextel.NET/Lib/linux-x64
+
+      - name: Pack
+        shell: pwsh
+        run: |
+          $proj = "nuget/CometTextel.NET/CometTextel.NET/CometTextel.NET.csproj"
+          $lib = "nuget/CometTextel.NET/CometTextel.NET/Lib"
+          Test-Path "$lib/win-x64/comettextel.dll"
+          Test-Path "$lib/linux-x64/libcomettextel.so"
+          Copy-Item "$lib/win-x64/comettextel.dll" "$lib/comettextel.dll" -Force
+          New-Item -ItemType Directory -Force -Path "artifact/nuget" | Out-Null
+          dotnet build $proj -c Release -p:Platform=x64
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet pack $proj -c Release -p:Platform=x64 `
+            -p:CometTextelRequireLinuxNative=true `
+            -o artifact/nuget --no-build
+
+      - name: Upload NuGet package
+        uses: actions/upload-artifact@v4
+        with:
+          name: CometTextel.NET-nupkg
+          path: artifact/nuget/*.nupkg
+          if-no-files-found: error
+          retention-days: 14

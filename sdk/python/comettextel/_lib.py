@@ -81,6 +81,21 @@ def _glob_libs_in(directory: Path) -> list[Path]:
     return found
 
 
+def _packaged_native_dir() -> Optional[Path]:
+    """Directory of wheel-embedded native libs (``_native/<tag>/``), if present."""
+
+    here = Path(__file__).resolve().parent
+    native = here / "_native"
+    if sys.platform == "win32":
+        tag = "win_amd64"
+    elif sys.platform.startswith("linux"):
+        tag = "linux_x86_64"
+    else:
+        return None
+    candidate = native / tag
+    return candidate if candidate.is_dir() else None
+
+
 def _search_dirs(explicit: Optional[Path]) -> list[Path]:
     """Search for the shared library in the given directories."""
 
@@ -92,6 +107,10 @@ def _search_dirs(explicit: Optional[Path]) -> list[Path]:
     if env:
         p = Path(env)
         dirs.append(p if p.is_dir() else p.parent)
+
+    packaged = _packaged_native_dir()
+    if packaged is not None:
+        dirs.append(packaged)
 
     # sdk/python/comettextel/_lib.py → parents[1]=sdk/python, [2]=sdk, [3]=repo root
     here = Path(__file__).resolve()

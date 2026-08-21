@@ -1,7 +1,9 @@
 # CometTextel.NET
 
-.NET wrapper for the [CometTextel](https://github.com/jiowcl/CometTextel) GSM SMS library (`comettextel.dll`).  
+.NET wrapper for the [CometTextel](https://github.com/jiowcl/CometTextel) GSM SMS library.  
 Send / list / delete short messages over a serial modem, or encode / decode PDU hex without hardware.
+
+Native RID assets: **`runtimes/win-x64/native/comettextel.dll`** and **`runtimes/linux-x64/native/libcomettextel.so`**.
 
 ![GitHub](https://img.shields.io/github/license/jiowcl/CometTextel.svg)
 ![.NET](https://img.shields.io/badge/.NET-512BD4?style=flat-square&logo=dotnet&logoColor=white)
@@ -12,13 +14,13 @@ Send / list / delete short messages over a serial modem, or encode / decode PDU 
 
 | Item | Detail |
 |------|--------|
-| OS | Windows 10+ |
+| OS | Windows 10+ or Linux (x64) |
 | Architecture | **x64 only** (`PlatformTarget=x64`) |
-| .NET | **net8.0-windows / net9.0-windows / net10.0-windows** |
-| Native | Ships `comettextel.dll` (CometTextel C ABI, win-x64) |
+| .NET | **net8.0 / net9.0 / net10.0** |
+| Native | Ships win-x64 DLL + linux-x64 `.so` (CometTextel C ABI) |
 | Hardware | GSM modem / USB dongle that speaks AT commands in **PDU mode** (for send/list/delete) |
 
-x86 / Arm64 processes cannot load the bundled 64-bit native DLL.
+x86 / Arm64 processes cannot load the bundled 64-bit native library.
 
 ## NuGet
 
@@ -26,7 +28,7 @@ x86 / Arm64 processes cannot load the bundled 64-bit native DLL.
 PM> Install-Package CometTextel.NET
 ```
 
-Consumer projects must target **Windows x64** so `comettextel.dll` can load.
+Target an **x64** process so the RID-native library can load (`win-x64` or `linux-x64`).
 
 ## Important notes
 
@@ -79,7 +81,7 @@ Console.WriteLine(decoded.PeerAddress + " => " + decoded.UserData);
 using CometTextel.NET.Core;
 
 using var modem = new GsmModem();
-modem.Open("COM3", baudRate: 115200);
+modem.Open("COM3", baudRate: 115200);   // Linux: "/dev/ttyUSB0"
 
 modem.Send(
     destination: "886912345678",
@@ -97,17 +99,17 @@ foreach (var message in modem.List())
 
 ## Smoke tests
 
-Requires `CometTextel.NET/Lib/comettextel.dll` (same as packing):
+Requires `CometTextel.NET/Lib/win-x64/comettextel.dll` (same as packing):
 
 ```powershell
 dotnet test CometTextel.NET.Tests\CometTextel.NET.Tests.csproj -c Release -p:Platform=x64
 ```
 
-`pack.ps1` and Windows CI run these before producing the NuGet package.
+`pack.ps1` and CI run these before producing the NuGet package.
 
 ## Examples project
 
-From `nuget/CometTextel.NET` (after `pack.ps1` or a native Release build that copied `Lib/comettextel.dll`):
+From `nuget/CometTextel.NET` (after `pack.ps1` or a native Release build that copied `Lib/win-x64/comettextel.dll`):
 
 ```powershell
 dotnet run --project CometTextel.Example -c Release -p:Platform=x64 -- pdu 886912345678 "Hello" 886932000000
@@ -118,25 +120,23 @@ dotnet run --project CometTextel.Example -c Release -p:Platform=x64 -- delete CO
 
 ## Build & pack
 
-Requires CMake + MSVC (for `comettextel.dll`) and .NET SDK 8+ on Windows.
+Requires CMake + MSVC (for `comettextel.dll`) and .NET SDK 8+ on Windows.  
+Full multi-RID packages also need a Linux `libcomettextel.so` (CI `pack-nuget` job merges both).
 
 ```powershell
 # From repository: comettextel/nuget/CometTextel.NET
 .\pack.ps1
+# Optional: include linux-x64 from a staged SO
+# .\pack.ps1 -LinuxSoPath D:\path\to\libcomettextel.so -RequireLinuxNative
 ```
 
 This script:
 
 1. Configures/builds the C++ library (`COMETTEXTEL_BUILD_C_API=ON`, win-x64 Release)  
-2. Copies `comettextel.dll` into `CometTextel.NET/Lib/`  
-3. Runs `dotnet pack` and writes `.nupkg` under `artifacts/`  
+2. Copies `comettextel.dll` into `CometTextel.NET/Lib/win-x64/`  
+3. Runs smoke tests, then `dotnet pack` → `artifacts/`  
 
-Manual steps (native DLL must already be in `CometTextel.NET/Lib/`):
-
-```powershell
-dotnet build CometTextel.NET.sln -c Release -p:Platform=x64
-dotnet pack CometTextel.NET\CometTextel.NET.csproj -c Release -p:Platform=x64 -o artifacts
-```
+CI uploads **`CometTextel.NET-nupkg`** with both `win-x64` and `linux-x64` RID folders.
 
 ## API surface (summary)
 
@@ -148,16 +148,12 @@ dotnet pack CometTextel.NET\CometTextel.NET.csproj -c Release -p:Platform=x64 -o
 
 Namespace: **`CometTextel.NET.Core`**.
 
-Native C ABI (inside `comettextel.dll`): `ct_modem_*`, `ct_pdu_encode_submit`, `ct_pdu_decode` — see `include/comettextel/c_api.h` in the C++ tree.
+Native C ABI: `ct_modem_*`, `ct_pdu_encode_submit`, `ct_pdu_decode` — see `include/comettextel/c_api.h`.
 
 ## License
 
 Copyright (c) 2026 Ji-Feng Tsai.  
-Code released under the MIT license.  
-
-## TODO
-
-- Optional linux-x64 NuGet RID assets  
+Code released under the MIT license.
 
 ## Donation
 

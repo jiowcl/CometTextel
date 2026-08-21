@@ -60,6 +60,10 @@ $exe = Join-Path $outDir "pdu_example.exe"
 & $pb (Join-Path $Root "pdu_example.pb") /EXE $exe /CONSOLE
 if ($LASTEXITCODE -ne 0) { throw "pbcompiler failed with exit $LASTEXITCODE" }
 
-Write-Host "Running self-check..."
+$modemExe = Join-Path $outDir "modem_example.exe"
+& $pb (Join-Path $Root "modem_example.pb") /EXE $modemExe /CONSOLE
+if ($LASTEXITCODE -ne 0) { throw "pbcompiler (modem_example) failed with exit $LASTEXITCODE" }
+
+Write-Host "Running PDU self-check..."
 & $exe
 exit $LASTEXITCODE

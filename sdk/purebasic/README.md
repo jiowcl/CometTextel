@@ -5,7 +5,7 @@ This is **not** a second native library: it **runtime-loads** `comettextel.dll` 
 
 Save `.pb` / `.pbi` as **UTF-8 with BOM** if you put CJK in the source. Without a BOM, the C backend can turn those literals into `U+FFFD` (PDU hex `FFFD…`). The sample uses `Chr($6E2C)` etc. so it does not depend on file encoding.
 
-PDU only (no modem). Not built in CI (PureBasic is a commercial compiler).
+Covers **PDU** helpers and **modem** (`CtModemOpen` / `Send` / `List` / `Delete`). Not built in CI (PureBasic is a commercial compiler).
 
 ![PureBasic](https://img.shields.io/badge/language-PureBasic-blue.svg)
 
@@ -13,8 +13,9 @@ PDU only (no modem). Not built in CI (PureBasic is a commercial compiler).
 
 ```text
 sdk/purebasic/
-├── comettextel.pbi   # PrototypeC + OpenLibrary + thin UTF-8 helpers
+├── comettextel.pbi   # PrototypeC + OpenLibrary + PDU + modem helpers
 ├── pdu_example.pb    # encode / decode console sample
+├── modem_example.pb  # list / send / delete
 └── README.md
 ```
 
@@ -39,7 +40,7 @@ sdk/purebasic/
 
 `CtInit()` loads the DLL with `LoadLibraryW` (exe folder, then current directory) and binds `ct_*` via `GetProcAddress`.
 
-The DLL **must** export the C ABI (`ct_status_string`, `ct_pdu_encode_submit`, `ct_pdu_encode_submit_segments`, `ct_pdu_decode`). An older `comettextel.dll` without the C API will load but fail on `GetProcAddress`. Check with:
+The DLL **must** export the C ABI (`ct_status_string`, `ct_pdu_*`, `ct_modem_*`). An older `comettextel.dll` without the C API will load but fail on `GetProcAddress`. Check with:
 
 ```bat
 dumpbin /exports comettextel.dll | findstr ct_
@@ -70,7 +71,17 @@ pdu_example.exe 886912345678 "Hello" 886932000000
 pdu_example.exe 886912345678 "測試中文簡訊" 886932000000
 ```
 
-No arguments runs a self-check:
+Modem (needs a real port):
+
+```bat
+modem_example.exe list COM3
+modem_example.exe send COM3 886932000000 886912345678 "Hello"
+modem_example.exe delete COM3 1
+```
+
+`list` rejoins complete concat sets (`concat_seq = 0`).
+
+No arguments on `pdu_example` runs a self-check:
 
 - UCS-2 ASCII round-trip
 - UCS-2 Chinese via `Chr` code points (avoids source-file encoding / `FFFD`)
