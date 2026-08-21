@@ -79,6 +79,12 @@ Examples: Windows `COM3`, Linux `/dev/ttyUSB0`. The modem must speak AT commands
 
 All text fields are **UTF-8**. See `include/comettextel/c_api.h` for details.
 
+### GSM 7-bit (`CT_DCS_GSM7`)
+
+Uses the **GSM 03.38** default alphabet plus ESC extension (`[]{}\~^|€`, form feed, …).  
+Extension characters count as **two** septets. Characters outside the alphabet fail encode (`CT_ERR_ENCODE`) — use `CT_DCS_UCS2` for CJK and other scripts.  
+`ct_pdu_encode_submit_segments` / `ct_modem_send` never split an ESC pair across segments.
+
 ## Static linking note
 
 Static archives are produced by a **C++** toolchain. Linking them from a pure C executable typically requires a C++ linker (e.g. `clang++` / `g++`) and the C++ runtime. Prefer the shared library unless you know you need static.

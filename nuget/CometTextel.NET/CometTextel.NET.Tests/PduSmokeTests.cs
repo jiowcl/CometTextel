@@ -66,6 +66,27 @@ public sealed class PduSmokeTests
     }
 
     [Fact]
+    public void EncodeSubmit_Decode_Gsm7_EscapeAndAtSign_RoundTrip()
+    {
+        const string destination = "886912345678";
+        const string text = "Cost: 10€ [ok] @home";
+        const string smsc = "886932000000";
+
+        string hex = Pdu.EncodeSubmit(destination, text, smsc, DataCoding.Gsm7Bit);
+        SmsMessage decoded = Pdu.Decode(hex);
+
+        Assert.Equal(text, decoded.UserData);
+        Assert.Equal(DataCoding.Gsm7Bit, decoded.Coding);
+    }
+
+    [Fact]
+    public void EncodeSubmit_Gsm7_UnsupportedCjk_Throws()
+    {
+        Assert.ThrowsAny<Exception>(() =>
+            Pdu.EncodeSubmit("886912345678", "你好", "886932000000", DataCoding.Gsm7Bit));
+    }
+
+    [Fact]
     public void Decode_EmptyHex_Throws()
     {
         Assert.ThrowsAny<ArgumentException>(() => Pdu.Decode(""));

@@ -95,6 +95,19 @@ with GsmModem() as modem:
 
 All text at the native boundary is **UTF-8**. Do not reimplement PDU codecs in Python; if the C ABI changes, update this package only.
 
+### GSM 7-bit (`DCS_GSM7`)
+
+Maps UTF-8 through **GSM 03.38** (default alphabet + ESC extension). Examples: `[]{}\~^|€`.  
+Unsupported glyphs (e.g. Chinese) raise `CometTextelError` / encode status — use `DCS_UCS2`.  
+Extension characters consume two septets; concat auto-split will not break an ESC pair.
+
+```python
+from comettextel import DCS_GSM7, decode, encode_submit
+
+hex_pdu = encode_submit("886912345678", "Cost: 10€ [ok]", "886932000000", DCS_GSM7)
+print(decode(hex_pdu).user_data)
+```
+
 ## See also
 
 - [`include/comettextel/c_api.h`](../../include/comettextel/c_api.h)

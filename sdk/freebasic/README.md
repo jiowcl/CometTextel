@@ -75,6 +75,7 @@ No arguments runs a self-check:
 - Native text is **UTF-8**. Use `CtUtf8FromW()` / `CtEncodeSubmit*W()` for Unicode `WString` input.
 - `CtMessage` uses `UByte` arrays sized like `char[N]` — do **not** use `ZString * N` for those fields (size differs).
 - `ct_pdu_encode_submit` is single-segment; `ct_pdu_encode_submit_segments` auto-splits with concat UDH.
+- `CT_DCS_GSM7` uses GSM 03.38 (UTF-8 in/out, ESC extension); alphabet outliers need `CT_DCS_UCS2`.
 
 Do not reimplement PDU codecs in FreeBASIC. If the C ABI changes, update `comettextel.bi` only.
 

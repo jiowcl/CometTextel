@@ -13,6 +13,7 @@ if str(_SDK_ROOT) not in sys.path:
     sys.path.insert(0, str(_SDK_ROOT))
 
 from comettextel import (  # noqa: E402
+    DCS_GSM7,
     DCS_UCS2,
     CometTextelError,
     decode,
@@ -86,6 +87,35 @@ def test_encode_submit_single() -> None:
 
 def test_encode_submit_rejects_or_errors_on_empty_dest() -> None:
     """Test encode submit rejects or errors on empty destination."""
-    
+
     with pytest.raises(CometTextelError):
         encode_submit("", "Hello", "886932000000", DCS_UCS2)
+
+
+def test_gsm7_ascii_roundtrip() -> None:
+    hex_pdu = encode_submit("886912345678", "Hello GSM7", "886932000000", DCS_GSM7)
+    msg = decode(hex_pdu)
+    assert msg.user_data == "Hello GSM7"
+    assert msg.dcs == DCS_GSM7
+
+
+def test_gsm7_escape_and_at_sign_roundtrip() -> None:
+    text = "Cost: 10€ [ok] @home"
+    hex_pdu = encode_submit("886912345678", text, "886932000000", DCS_GSM7)
+    msg = decode(hex_pdu)
+    assert msg.user_data == text
+    assert msg.dcs == DCS_GSM7
+
+
+def test_gsm7_rejects_cjk() -> None:
+    with pytest.raises(CometTextelError):
+        encode_submit("886912345678", "你好", "886932000000", DCS_GSM7)
+
+
+def test_gsm7_escape_forces_concat() -> None:
+    # 159×A + € => 161 septets → two segments under encode_submit_segments.
+    text = ("A" * 159) + "€"
+    parts = encode_submit_segments("886912345678", text, "886932000000", DCS_GSM7)
+    assert len(parts) == 2
+    joined = "".join(decode(p).user_data for p in parts)
+    assert joined == text

@@ -48,7 +48,7 @@ enum ct_status {
 
 /** @brief TP-DCS values. */
 enum ct_dcs {
-    CT_DCS_GSM7 = 0,
+    CT_DCS_GSM7 = 0, /**< GSM 03.38 7-bit default alphabet (+ ESC extension); text is UTF-8 */
     CT_DCS_8BIT = 4,
     CT_DCS_UCS2 = 8
 };
@@ -148,11 +148,16 @@ CT_API int ct_modem_delete(ct_modem* modem, int index, int timeout_ms);
  * @brief Encodes a submit PDU hex string (no modem I/O).
  * @param smsc The service center address.
  * @param destination The destination address.
- * @param text The message text.
+ * @param text UTF-8 message body.
  * @param dcs The data coding scheme.
  * @param out_hex The destination PDU hex string.
  * @param out_hex_cap The destination PDU hex string capacity.
  * @return CT_OK on success; writes NUL-terminated hex into @p out_hex.
+ *
+ * @note For @ref CT_DCS_GSM7, @p text is mapped with the GSM 03.38 default
+ *       alphabet and ESC extension (`[]{}\\~^|€`, …). Unsupported glyphs
+ *       return @c CT_ERR_ENCODE (use @ref CT_DCS_UCS2). Extension characters
+ *       consume two septets toward the 160-septet single-segment limit.
  */
 CT_API int ct_pdu_encode_submit(const char* smsc,
                                 const char* destination,
