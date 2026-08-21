@@ -45,20 +45,42 @@ public:
     [[nodiscard]] static std::error_code hex_to_bytes(std::string_view hex, std::vector<std::uint8_t>& out);
 
     /**
-     * @brief Packs septets into the GSM 7-bit packing format.
-     * @param text The text to encode.
-     * @return The encoded 7-bit bytes.
+     * @brief Packs GSM septet values into the GSM 7-bit packing format.
+     * @param septets One byte per septet (low 7 bits); not UTF-8 text.
+     * @return The packed octets.
+     *
+     * @note For UTF-8 message text use @ref utf8_to_gsm7 then this, or
+     *       @ref encode / @ref encode_segments with @ref DataCoding::Gsm7Bit.
      */
-    [[nodiscard]] static std::vector<std::uint8_t> encode_7bit(std::string_view text);
+    [[nodiscard]] static std::vector<std::uint8_t> encode_7bit(std::string_view septets);
 
     /**
-     * @brief Unpacks GSM 7-bit packed data into a 7-bit character string.
+     * @brief Unpacks GSM 7-bit packed data into raw septet values.
      * @param packed Packed octets.
      * @param septet_count Number of septets described by TP-UDL.
-     * @return The decoded 7-bit string.
+     * @return One byte per septet (not UTF-8).
+     *
+     * @note Convert to UTF-8 with @ref gsm7_to_utf8.
      */
     [[nodiscard]] static std::string decode_7bit(std::span<const std::uint8_t> packed,
                                                  std::size_t septet_count);
+
+    /**
+     * @brief Maps UTF-8 text to GSM 03.38 default-alphabet septets (with ESC extension).
+     * @param utf8 UTF-8 input.
+     * @param septets Receives one byte per septet (ESC sequences use two).
+     * @return Empty on success; @ref Errc::EncodeFailure if a character is not in
+     *         the default alphabet or extension table.
+     */
+    [[nodiscard]] static std::error_code utf8_to_gsm7(std::string_view utf8, std::string& septets);
+
+    /**
+     * @brief Maps GSM 03.38 septets (including ESC pairs) to UTF-8 text.
+     * @param septets Raw septet bytes from @ref decode_7bit.
+     * @param utf8 Receives UTF-8 output.
+     * @return Empty on success.
+     */
+    [[nodiscard]] static std::error_code gsm7_to_utf8(std::string_view septets, std::string& utf8);
 
     /**
      * @brief Encodes text as UCS-2 (UTF-16BE) octets.
@@ -99,8 +121,10 @@ public:
      * @return Empty error_code on success.
      *
      * @note Single-segment only (no UDH). Length limits:
-     *       GSM 7-bit ≤ 160 septets; 8-bit / UCS-2 ≤ 140 octets.
+     *       GSM 7-bit ≤ 160 septets (after GSM 03.38 mapping; ESC chars count as 2);
+     *       8-bit / UCS-2 ≤ 140 octets.
      *       Use @ref encode_segments to auto-split longer payloads.
+     *       For GSM 7-bit, @ref Message::user_data is UTF-8.
      */
     [[nodiscard]] static std::error_code encode(const Message& message, std::string& pdu_hex);
 
@@ -116,6 +140,7 @@ public:
      *       @ref Message::concat_ref is used when non-zero (low 8 bits); otherwise
      *       a checksum of the payload is used.
      *       Per-segment payload with UDH: GSM 7-bit ≤ 153 septets; 8-bit / UCS-2 ≤ 134 octets.
+     *       GSM 7-bit segment splits never break an ESC + extension septet pair.
      */
     [[nodiscard]] static std::error_code encode_segments(const Message& message,
                                                          std::vector<std::string>& pdu_hexes);

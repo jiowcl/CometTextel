@@ -29,7 +29,7 @@
 - **Per-segment payload caps**:  
   - Single (no UDH): GSM 7-bit ≤ **160** septets; 8-bit / UCS-2 ≤ **140** octets  
   - Concat (with UDH): GSM 7-bit ≤ **153** septets; 8-bit / UCS-2 ≤ **134** octets  
-- GSM 7-bit path treats input bytes as septets; it does not validate the full GSM 03.38 alphabet / escape table.  
+- **GSM 7-bit** maps UTF-8 via the GSM 03.38 default alphabet and ESC extension table (`[]{}\\~^|€`, etc.). Unsupported glyphs return encode failure (use UCS-2). Extension characters consume **two** septets; concat splits never break an ESC pair.  
 
 ## Environment  
 
@@ -99,7 +99,7 @@ comettextel_c_api_example pdu 886912345678 "Hello" 886932000000
 
 CI / Release also publish focused **C SDK** artifacts (`comettextel-c-sdk-*`) with only `c_api.h`, shared/static libs, and the example source — see [`sdk/c/README.md`](sdk/c/README.md).  
 
-Optional language samples (thin FFI, same shared library; not built in CI): [`sdk/python/`](sdk/python) (ctypes, PDU + modem; **pytest runs in CI**), [`sdk/purebasic/`](sdk/purebasic) (PDU; local `verify.ps1`), [`sdk/freebasic/`](sdk/freebasic) (PDU; local `verify.ps1`).  
+Optional language samples (thin FFI, same shared library; not built in CI compilers): [`sdk/python/`](sdk/python) (ctypes, PDU + modem; **pytest in CI**), [`sdk/purebasic/`](sdk/purebasic) (PDU; local `verify.ps1`), [`sdk/freebasic/`](sdk/freebasic) (PDU; local `verify.ps1`).  
 
 ## .NET NuGet (optional)  
 

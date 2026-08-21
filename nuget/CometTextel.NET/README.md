@@ -35,7 +35,9 @@ Consumer projects must target **Windows x64** so `comettextel.dll` can load.
 `Pdu.EncodeSubmit` is **single-segment** (fails if the payload is too long).  
 `Pdu.EncodeSubmitSegments` and `GsmModem.Send` **auto-split** with concat UDH (IEI `0x00`, ≤ 255 parts).
 
-Payload caps: single GSM 7-bit ≤ 160 / 8-bit·UCS-2 ≤ 140; concat GSM 7-bit ≤ 153 / 8-bit·UCS-2 ≤ 134.
+Payload caps: single GSM 7-bit ≤ 160 septets (GSM 03.38 alphabet; ESC chars count as 2) / 8-bit·UCS-2 ≤ 140; concat GSM 7-bit ≤ 153 / 8-bit·UCS-2 ≤ 134.
+
+GSM 7-bit `UserData` is UTF-8. Characters outside the default alphabet + ESC extension fail encode (use UCS-2).
 
 On receive / list, if TP-UDHI is set, the UDH is **skipped** (`HasUdh == true`). Concat IEI `0x00` / `0x08` populate `IsConcatenated`, `ConcatRef`, `ConcatTotal`, `ConcatSeq`. `GsmModem.ListMessages` rejoins **complete** segment sets (`ConcatSeq == 0`, `IsReassembledConcat`). Incomplete parts remain separate.
 

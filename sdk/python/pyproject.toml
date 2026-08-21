@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "comettextel"
-version = "1.3.0"
+version = "1.4.0"
 description = "Thin ctypes FFI for the CometTextel C ABI (PDU + GSM modem)."
 readme = "README.md"
 requires-python = ">=3.10"

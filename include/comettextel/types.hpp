@@ -21,7 +21,7 @@ namespace comettextel {
  * @brief Alphabet used for the TP-User-Data field (TP-DCS).
  */
 enum class DataCoding : std::uint8_t {
-    Gsm7Bit = 0,   ///< GSM 7-bit default alphabet
+    Gsm7Bit = 0,   ///< GSM 03.38 7-bit default alphabet (UTF-8 at Message::user_data)
     EightBit = 4,  ///< 8-bit data
     Ucs2 = 8       ///< UCS-2 (UTF-16BE) text
 };

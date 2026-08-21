@@ -9,12 +9,12 @@
     <PackageId>CometTextel.NET</PackageId>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <RepositoryUrl>https://github.com/jiowcl/CometTextel</RepositoryUrl>
-    <PackageReleaseNotes>1.3.0: ListMessages rejoins complete concatenated SMS sets (ConcatSeq == 0).</PackageReleaseNotes>
+    <PackageReleaseNotes>1.4.0: GSM 7-bit uses full GSM 03.38 default alphabet + ESC extension (UTF-8 in/out; ESC chars count as two septets).</PackageReleaseNotes>
     <PackageTags>comettextel;sms;gsm;pdu;modem;serial;pinvoke;windows;x64</PackageTags>
     <Authors>Jiowcl</Authors>
     <PackageProjectUrl>https://github.com/jiowcl/CometTextel</PackageProjectUrl>
     <Platforms>AnyCPU;x64</Platforms>
-    <Version>1.3.0</Version>
+    <Version>1.4.0</Version>
     <PlatformTarget>x64</PlatformTarget>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
     <PackageReadmeFile>README.md</PackageReadmeFile>

@@ -120,6 +120,116 @@ void expect_message_roundtrip(const comettextel::Message& original)
     CHECK(decoded.user_data == original.user_data);
 }
 
+void test_gsm7_alphabet_utf8_roundtrip()
+{
+    const char* samples[] = {
+        "Hello",
+        "@£$¥èéùìòÇ",
+        "ÄÖÑÜäöñüà",
+        "[]{}\\~^|€",
+        "ΔΦΓΛΩ",
+        "Line1\nLine2",
+    };
+
+    for (const char* text : samples) {
+        std::string septets;
+        CHECK(!comettextel::PduCodec::utf8_to_gsm7(text, septets));
+        CHECK(!septets.empty());
+
+        std::string utf8;
+        CHECK(!comettextel::PduCodec::gsm7_to_utf8(septets, utf8));
+        CHECK(utf8 == text);
+    }
+}
+
+void test_gsm7_pdu_escape_and_at_sign()
+{
+    comettextel::Message message;
+    message.service_center = "886932000000";
+    message.peer_address = "886912345678";
+    message.coding = comettextel::DataCoding::Gsm7Bit;
+    message.user_data = "Cost: 10€ [ok]";
+    expect_message_roundtrip(message);
+}
+
+void test_gsm7_rejects_unsupported_glyph()
+{
+    comettextel::Message message;
+    message.service_center = "886932000000";
+    message.peer_address = "886912345678";
+    message.coding = comettextel::DataCoding::Gsm7Bit;
+    message.user_data = "你好"; // CJK not in GSM 03.38 default alphabet
+
+    std::string pdu_hex;
+    const auto ec = comettextel::PduCodec::encode(message, pdu_hex);
+    CHECK(ec == comettextel::make_error_code(comettextel::Errc::EncodeFailure));
+    CHECK(pdu_hex.empty());
+}
+
+void test_gsm7_escape_counts_as_two_septets()
+{
+    // 159 plain 'A' + one euro (ESC+0x65) => 161 septets → single encode fails.
+    std::string text(159, 'A');
+    text += "\xE2\x82\xAC"; // € UTF-8
+
+    std::string septets;
+    CHECK(!comettextel::PduCodec::utf8_to_gsm7(text, septets));
+    CHECK(septets.size() == 161);
+
+    comettextel::Message message;
+    message.service_center = "886932000000";
+    message.peer_address = "886912345678";
+    message.coding = comettextel::DataCoding::Gsm7Bit;
+    message.user_data = text;
+
+    std::string pdu_hex;
+    CHECK(comettextel::PduCodec::encode(message, pdu_hex) ==
+          comettextel::make_error_code(comettextel::Errc::EncodeFailure));
+
+    std::vector<std::string> parts;
+    CHECK(!comettextel::PduCodec::encode_segments(message, parts));
+    CHECK(parts.size() == 2);
+
+    std::string joined;
+    for (const auto& part : parts) {
+        comettextel::Message decoded;
+        CHECK(!comettextel::PduCodec::decode(part, decoded));
+        joined += decoded.user_data;
+    }
+    CHECK(joined == text);
+}
+
+void test_gsm7_concat_does_not_split_escape_pair()
+{
+    // Each '[' is ESC+0x3C (2 septets). 81 × '[' => 162 septets → concat;
+    // chunking must not split an ESC from its extension code.
+    std::string text(81, '[');
+
+    comettextel::Message message;
+    message.service_center = "886932000000";
+    message.peer_address = "886912345678";
+    message.coding = comettextel::DataCoding::Gsm7Bit;
+    message.user_data = text;
+    message.concat_ref = 0x42;
+
+    std::string septets;
+    CHECK(!comettextel::PduCodec::utf8_to_gsm7(text, septets));
+    CHECK(septets.size() == 162);
+
+    std::vector<std::string> parts;
+    CHECK(!comettextel::PduCodec::encode_segments(message, parts));
+    CHECK(parts.size() >= 2);
+
+    std::string joined;
+    for (const auto& part : parts) {
+        comettextel::Message decoded;
+        CHECK(!comettextel::PduCodec::decode(part, decoded));
+        CHECK(decoded.is_concatenated);
+        joined += decoded.user_data;
+    }
+    CHECK(joined == text);
+}
+
 void test_pdu_submit_roundtrip_gsm7bit()
 {
     comettextel::Message message;
@@ -665,6 +775,11 @@ int main()
     test_digit_roundtrip();
     test_7bit_roundtrip();
     test_ucs2_roundtrip();
+    test_gsm7_alphabet_utf8_roundtrip();
+    test_gsm7_pdu_escape_and_at_sign();
+    test_gsm7_rejects_unsupported_glyph();
+    test_gsm7_escape_counts_as_two_septets();
+    test_gsm7_concat_does_not_split_escape_pair();
     test_pdu_submit_roundtrip_gsm7bit();
     test_pdu_submit_roundtrip_ucs2();
     test_pdu_submit_roundtrip_ucs2_cjk();
