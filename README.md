@@ -19,7 +19,7 @@
 - **Modem Helpers**: Initialize, send (`AT+CMGS`), list (`AT+CMGL`), and delete (`AT+CMGD`) in PDU mode.  
 - **Modern C++23**: RAII handles, `std::error_code`, `std::span`, and clear public headers under `include/comettextel/`.  
 - **Shared & Static**: Build `comettextel` as a DLL/shared library and/or a static archive from one CMake tree.  
-- **Doxygen-Ready**: English API comments with author metadata for generated documentation.  
+- **Multi-Language & Package Ready:** Pure C-ABI exports with high-level bindings for **C# (.NET / NuGet)**, **Python (PyPI)**, **C/C++**, **PureBasic**, and **FreeBASIC**.
 
 ## Limitations  
 
@@ -31,6 +31,7 @@
   - Concat (with UDH): GSM 7-bit ≤ **153** septets; 8-bit / UCS-2 ≤ **134** octets  
 - **GSM 7-bit** maps UTF-8 via the GSM 03.38 default alphabet and ESC extension table (`[]{}\\~^|€`, etc.). Unsupported glyphs return encode failure (use UCS-2). Extension characters consume **two** septets; concat splits never break an ESC pair.  
 - **TP-VP / TP-SRR**: submit PDU APIs omit validity period and status-report request by default. Optional relative TP-VP (`0..255`, where `0` is 5 minutes) and TP-SRR are available through the options / C ABI `_ex` APIs.
+- **SMS-STATUS-REPORT**: `PduCodec::decode` recognizes MTI=10 and exposes TP-MR, TP-RA, TP-SCTS, TP-DT, and TP-Status through `Message`.
 
 ## Environment  
 

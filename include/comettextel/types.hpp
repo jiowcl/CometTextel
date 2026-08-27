@@ -86,7 +86,7 @@ struct Message {
     std::string peer_address;   ///< Destination (TP-DA) or originator (TP-RA)
     std::uint8_t protocol_id{0}; ///< TP-PID
     DataCoding coding{DataCoding::Ucs2}; ///< TP-DCS
-    std::string service_timestamp; ///< TP-SCTS (receive path)
+    std::string service_timestamp; ///< TP-SCTS (receive/status-report path)
     std::string user_data; ///< Decoded TP-UD text / bytes as characters (UDH stripped when present)
     std::int16_t index{-1}; ///< Storage index when listing messages
     bool has_udh{false}; ///< True when TP-UDHI was set (header skipped from user_data)
@@ -96,10 +96,15 @@ struct Message {
     std::uint8_t concat_seq{0}; ///< 1-based segment index; @c 0 when @ref is_reassembled_concat
     std::optional<std::uint8_t> relative_validity_period{}; ///< TP-VP; absent means no TP-VP
     bool request_status_report{false}; ///< TP-SRR; request SMS-STATUS-REPORT on submit
+    bool is_status_report{false}; ///< True when this is an SMS-STATUS-REPORT
+    std::uint8_t message_reference{0}; ///< TP-MR in a status report
+    std::uint8_t tp_status{0}; ///< TP-Status in a status report
+    std::string discharge_time; ///< TP-DT in a status report (serialized semi-octets)
 
     /**
      * @brief True when this message is a full join of concat segments
      *        (@ref is_concatenated and @ref concat_seq == 0).
+     * @return True when this message is a full join of concat segments.
      */
     [[nodiscard]] bool is_reassembled_concat() const noexcept
     {

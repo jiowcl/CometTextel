@@ -1126,11 +1126,126 @@ std::error_code PduCodec::decode(std::string_view pdu_hex, Message& message)
     // not expose the latter as a request made by the sender.
     message.request_status_report = is_submit && ((first_octet & 0x20U) != 0U);
 
+    if (mti == 0x02U) {
+        // SMS-STATUS-REPORT: TP-MR, TP-RA, TP-SCTS, TP-DT, TP-Status,
+        // followed by optional parameters described by TP-PI.
+        message.is_status_report = true;
+
+        if (offset >= bytes.size()) {
+            return make_error_code(Errc::DecodeFailure);
+        }
+
+        message.message_reference = bytes[offset++];
+
+        if (offset >= bytes.size()) {
+            return make_error_code(Errc::DecodeFailure);
+        }
+
+        const std::uint8_t addr_len_digits = bytes[offset++];
+
+        if (offset >= bytes.size()) {
+            return make_error_code(Errc::DecodeFailure);
+        }
+
+        ++offset; // TP-RA TOA
+
+        const std::size_t addr_octets =
+            (static_cast<std::size_t>(addr_len_digits) + 1U) / 2U;
+
+        if (offset + addr_octets > bytes.size()) {
+            return make_error_code(Errc::DecodeFailure);
+        }
+
+        const auto address_hex =
+            bytes_to_hex(std::span<const std::uint8_t>{bytes.data() + offset, addr_octets});
+
+        message.peer_address = serialize_digits(address_hex);
+
+        if (message.peer_address.size() > addr_len_digits) {
+            message.peer_address.resize(addr_len_digits);
+        }
+
+        offset += addr_octets;
+
+        if (offset + 15U > bytes.size()) {
+            return make_error_code(Errc::DecodeFailure);
+        }
+
+        const auto service_hex =
+            bytes_to_hex(std::span<const std::uint8_t>{bytes.data() + offset, 7});
+        message.service_timestamp = serialize_digits(service_hex);
+        offset += 7;
+
+        const auto discharge_hex =
+            bytes_to_hex(std::span<const std::uint8_t>{bytes.data() + offset, 7});
+
+        message.discharge_time = serialize_digits(discharge_hex);
+        offset += 7;
+        message.tp_status = bytes[offset++];
+
+        if (offset < bytes.size()) {
+            const std::uint8_t parameter_indicator = bytes[offset++];
+
+            if ((parameter_indicator & 0x01U) != 0U) {
+                if (offset >= bytes.size()) {
+                    return make_error_code(Errc::DecodeFailure);
+                }
+
+                message.protocol_id = bytes[offset++];
+            }
+
+            if ((parameter_indicator & 0x02U) != 0U) {
+                if (offset >= bytes.size()) {
+                    return make_error_code(Errc::DecodeFailure);
+                }
+
+                message.coding = static_cast<DataCoding>(bytes[offset++]);
+            }
+
+            if ((parameter_indicator & 0x04U) != 0U) {
+                if (offset >= bytes.size()) {
+                    return make_error_code(Errc::DecodeFailure);
+                }
+
+                const std::size_t udl = bytes[offset++];
+                const std::size_t packed_len =
+                    message.coding == DataCoding::Gsm7Bit
+                        ? (udl * 7U + 7U) / 8U
+                        : udl;
+                if (offset + packed_len > bytes.size()) {
+                    return make_error_code(Errc::DecodeFailure);
+                }
+
+                const auto payload =
+                    std::span<const std::uint8_t>{bytes.data() + offset, packed_len};
+                if (message.coding == DataCoding::Gsm7Bit) {
+                    const auto septets = decode_7bit(payload, udl);
+
+                    if (const auto ec = gsm7_to_utf8(septets, message.user_data); ec) {
+                        return ec;
+                    }
+                } else if (message.coding == DataCoding::Ucs2) {
+                    if (const auto ec = decode_ucs2(payload, message.user_data); ec) {
+                        return ec;
+                    }
+                } else {
+                    message.user_data.assign(
+                        reinterpret_cast<const char*>(payload.data()), payload.size());
+                }
+
+                offset += packed_len;
+            }
+        }
+
+        return {};
+    }
+
     if (is_submit) {
         // SMS-SUBMIT carries TP-MR before the destination address.
         if (offset >= bytes.size()) {
             return make_error_code(Errc::DecodeFailure);
         }
+        
         ++offset; // TP-MR
     }
 

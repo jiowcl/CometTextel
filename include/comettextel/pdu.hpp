@@ -152,13 +152,15 @@ public:
     /**
      * @brief Decodes a PDU hex string into @ref Message fields.
      *
-     * Supports SMS-DELIVER (receive) and SMS-SUBMIT (as produced by @ref encode)
-     * based on the TP-MTI bits in the first TPDU octet.
+     * Supports SMS-DELIVER, SMS-SUBMIT (as produced by @ref encode), and
+     * SMS-STATUS-REPORT based on the TP-MTI bits in the first TPDU octet.
      *
      * @note User-Data Header (UDH): when TP-UDHI is set, the header octets are
      *       skipped so @ref Message::user_data contains the payload text only.
      *       Concatenated SMS IEI 0x00 (8-bit ref) and 0x08 (16-bit ref) are
      *       parsed into @ref Message::is_concatenated / concat_* fields.
+     *       A status report sets @ref Message::is_status_report and exposes
+     *       TP-MR, TP-Status, TP-RA, TP-SCTS, and TP-DT.
      *       Use @ref reassemble_messages to join complete segment sets.
      */
     [[nodiscard]] static std::error_code decode(std::string_view pdu_hex, Message& message);

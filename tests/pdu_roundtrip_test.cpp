@@ -403,6 +403,50 @@ void test_pdu_deliver_path()
     CHECK(!decoded.service_timestamp.empty());
 }
 
+void test_status_report_fixtures()
+{
+    // SMS-STATUS-REPORT with no optional parameters:
+    // MR=0x2A, RA=886912345678, SCTS=DT=21 50 70 41 80 45 23.
+    constexpr char kDelivered[] =
+        "00022A0C91889621436587215070418045232150704180452300";
+    constexpr char kExpired[] =
+        "00022A0C91889621436587215070418045232150704180452340";
+    constexpr char kWithOptionalParameters[] =
+        "00022A0C9188962143658721507041804523215070418045230007000002CF25";
+
+    comettextel::Message delivered;
+    CHECK(!comettextel::PduCodec::decode(kDelivered, delivered));
+    CHECK(delivered.is_status_report);
+    CHECK(delivered.message_reference == 0x2A);
+    CHECK(delivered.peer_address == "886912345678");
+    CHECK(delivered.service_timestamp == "12050714085432");
+    CHECK(delivered.discharge_time == "12050714085432");
+    CHECK(delivered.tp_status == 0x00);
+    CHECK(delivered.user_data.empty());
+
+    comettextel::Message expired;
+    CHECK(!comettextel::PduCodec::decode(kExpired, expired));
+    CHECK(expired.is_status_report);
+    CHECK(expired.message_reference == 0x2A);
+    CHECK(expired.tp_status == 0x40);
+
+    comettextel::Message with_optional;
+    CHECK(!comettextel::PduCodec::decode(kWithOptionalParameters, with_optional));
+    CHECK(with_optional.is_status_report);
+    CHECK(with_optional.protocol_id == 0x00);
+    CHECK(with_optional.coding == comettextel::DataCoding::Gsm7Bit);
+    CHECK(with_optional.user_data == "OK");
+}
+
+void test_status_report_rejects_truncated_fixture()
+{
+    constexpr char kTruncated[] =
+        "00022A0C918896214365872150704180452321507041804523";
+    comettextel::Message message;
+    CHECK(comettextel::PduCodec::decode(kTruncated, message) ==
+          comettextel::make_error_code(comettextel::Errc::DecodeFailure));
+}
+
 void test_encode_rejects_empty_destination()
 {
     comettextel::Message message;
@@ -874,6 +918,8 @@ int main()
     test_pdu_submit_roundtrip_eightbit();
     test_pdu_submit_default_smsc();
     test_pdu_deliver_path();
+    test_status_report_fixtures();
+    test_status_report_rejects_truncated_fixture();
     test_encode_rejects_empty_destination();
     test_encode_rejects_overlong_payload();
     test_classify_response();
