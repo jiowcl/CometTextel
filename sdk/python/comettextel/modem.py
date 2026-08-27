@@ -84,18 +84,24 @@ class GsmModem:
         smsc: str = "",
         dcs: int = DCS_UCS2,
         timeout_ms: int = 10000,
+        *,
+        relative_validity_period: Optional[int] = None,
+        request_status_report: bool = False,
     ) -> None:
-        """Send an SMS (long text auto-splits with concat UDH)."""
+        """Send an SMS with optional relative TP-VP and TP-SRR."""
 
         if not destination:
             raise ValueError("destination must be non-empty")
         lib = self._ensure_open()
-        status = lib.ct_modem_send(
+        vp = -1 if relative_validity_period is None else int(relative_validity_period)
+        status = lib.ct_modem_send_ex(
             self._handle,
             _as_utf8(smsc),
             _as_utf8(destination),
             _as_utf8(text),
             int(dcs),
+            vp,
+            int(bool(request_status_report)),
             int(timeout_ms),
         )
         _check(status, "ct_modem_send")

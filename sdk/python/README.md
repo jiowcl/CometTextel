@@ -130,6 +130,24 @@ hex_pdu = encode_submit("886912345678", "Cost: 10€ [ok]", "886932000000", DCS_
 print(decode(hex_pdu).user_data)
 ```
 
+### Validity Period / Status Report
+
+The default submit APIs omit TP-VP, allowing the SMSC to apply its default
+validity period. To set a GSM relative TP-VP, pass an octet from `0` to `255`;
+`0` means five minutes. `request_status_report=True` sets TP-SRR:
+
+```python
+hex_pdu = encode_submit(
+    "886912345678", "OTP 123456", "886932000000", DCS_GSM7,
+    relative_validity_period=0x8F,
+    request_status_report=True,
+)
+```
+
+The same keyword arguments are available on `encode_submit_segments()` and
+`GsmModem.send()`. A status report is only requested here; parsing and modem
+delivery-event tracking are not yet provided.
+
 ## See also
 
 - [`include/comettextel/c_api.h`](../../include/comettextel/c_api.h)

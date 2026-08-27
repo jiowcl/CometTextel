@@ -10,6 +10,7 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <system_error>
 
@@ -93,6 +94,8 @@ struct Message {
     std::uint16_t concat_ref{0}; ///< Concatenation reference number
     std::uint8_t concat_total{0}; ///< Total segments (valid when is_concatenated)
     std::uint8_t concat_seq{0}; ///< 1-based segment index; @c 0 when @ref is_reassembled_concat
+    std::optional<std::uint8_t> relative_validity_period{}; ///< TP-VP; absent means no TP-VP
+    bool request_status_report{false}; ///< TP-SRR; request SMS-STATUS-REPORT on submit
 
     /**
      * @brief True when this message is a full join of concat segments

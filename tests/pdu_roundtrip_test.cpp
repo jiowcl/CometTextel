@@ -152,6 +152,76 @@ void test_gsm7_pdu_escape_and_at_sign()
     expect_message_roundtrip(message);
 }
 
+void test_submit_defaults_to_no_validity_period()
+{
+    comettextel::Message message;
+    message.service_center = "886932000000";
+    message.peer_address = "886912345678";
+    message.coding = comettextel::DataCoding::Gsm7Bit;
+    message.user_data = "Hi";
+
+    std::string pdu_hex;
+    CHECK(!comettextel::PduCodec::encode(message, pdu_hex));
+
+    std::vector<std::uint8_t> bytes;
+    CHECK(!comettextel::PduCodec::hex_to_bytes(pdu_hex, bytes));
+    const std::size_t first_octet_offset = 1U + bytes[0];
+    CHECK(bytes[first_octet_offset] == 0x01U); // SMS-SUBMIT, no UDH, no VP/SRR
+
+    comettextel::Message decoded;
+    CHECK(!comettextel::PduCodec::decode(pdu_hex, decoded));
+    CHECK(!decoded.relative_validity_period.has_value());
+    CHECK(!decoded.request_status_report);
+}
+
+void test_submit_relative_validity_and_status_report()
+{
+    comettextel::Message message;
+    message.service_center = "886932000000";
+    message.peer_address = "886912345678";
+    message.coding = comettextel::DataCoding::Gsm7Bit;
+    message.user_data = "Hi";
+    message.relative_validity_period = 0x00; // Explicitly five minutes.
+    message.request_status_report = true;
+
+    std::string pdu_hex;
+    CHECK(!comettextel::PduCodec::encode(message, pdu_hex));
+
+    std::vector<std::uint8_t> bytes;
+    CHECK(!comettextel::PduCodec::hex_to_bytes(pdu_hex, bytes));
+    const std::size_t first_octet_offset = 1U + bytes[0];
+    CHECK(bytes[first_octet_offset] == 0x31U); // relative VP + TP-SRR
+
+    comettextel::Message decoded;
+    CHECK(!comettextel::PduCodec::decode(pdu_hex, decoded));
+    CHECK(decoded.relative_validity_period.has_value());
+    CHECK(*decoded.relative_validity_period == 0x00U);
+    CHECK(decoded.request_status_report);
+}
+
+void test_submit_concat_carries_options()
+{
+    comettextel::Message message;
+    message.service_center = "886932000000";
+    message.peer_address = "886912345678";
+    message.coding = comettextel::DataCoding::Gsm7Bit;
+    message.user_data = std::string(161, 'A');
+    message.relative_validity_period = 0x8FU;
+    message.request_status_report = true;
+
+    std::vector<std::string> parts;
+    CHECK(!comettextel::PduCodec::encode_segments(message, parts));
+    CHECK(parts.size() == 2);
+
+    for (const auto& part : parts) {
+        comettextel::Message decoded;
+        CHECK(!comettextel::PduCodec::decode(part, decoded));
+        CHECK(decoded.relative_validity_period.has_value());
+        CHECK(*decoded.relative_validity_period == 0x8FU);
+        CHECK(decoded.request_status_report);
+    }
+}
+
 void test_gsm7_rejects_unsupported_glyph()
 {
     comettextel::Message message;
@@ -317,7 +387,6 @@ void test_pdu_deliver_path()
 
     deliver.push_back(bytes[offset++]); // PID
     deliver.push_back(bytes[offset++]); // DCS
-    ++offset;                           // skip relative VP
 
     // Dummy TP-SCTS (7 octets) => 14 digit timestamp after serialize.
     constexpr std::uint8_t kScts[7] = {0x21, 0x50, 0x70, 0x41, 0x80, 0x45, 0x23};
@@ -709,6 +778,22 @@ void test_c_api_pdu_roundtrip()
 #endif
 }
 
+void test_c_api_submit_options()
+{
+#if defined(COMETTEXTEL_HAS_C_API)
+    char hex[1024]{};
+    CHECK(ct_pdu_encode_submit_ex("886932000000", "886912345678", "Hi", CT_DCS_GSM7,
+                                  0x00, 1, hex, sizeof(hex)) == CT_OK);
+
+    std::vector<std::uint8_t> bytes;
+    CHECK(!comettextel::PduCodec::hex_to_bytes(hex, bytes));
+    const std::size_t first_octet_offset = 1U + bytes[0];
+    CHECK(bytes[first_octet_offset] == 0x31U);
+#else
+    CHECK(true);
+#endif
+}
+
 void test_c_api_concat_fields()
 {
 #if defined(COMETTEXTEL_HAS_C_API)
@@ -777,6 +862,9 @@ int main()
     test_ucs2_roundtrip();
     test_gsm7_alphabet_utf8_roundtrip();
     test_gsm7_pdu_escape_and_at_sign();
+    test_submit_defaults_to_no_validity_period();
+    test_submit_relative_validity_and_status_report();
+    test_submit_concat_carries_options();
     test_gsm7_rejects_unsupported_glyph();
     test_gsm7_escape_counts_as_two_septets();
     test_gsm7_concat_does_not_split_escape_pair();
@@ -802,6 +890,7 @@ int main()
     test_reassemble_preserves_singles_and_order();
     test_parse_message_list_reassembles();
     test_c_api_pdu_roundtrip();
+    test_c_api_submit_options();
     test_c_api_concat_fields();
     test_c_api_encode_segments();
 

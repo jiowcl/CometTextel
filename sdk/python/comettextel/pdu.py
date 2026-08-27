@@ -99,17 +99,26 @@ def encode_submit(
     smsc: str = "",
     dcs: int = DCS_UCS2,
     *,
+    relative_validity_period: Optional[int] = None,
+    request_status_report: bool = False,
     out_hex_cap: int = _DEFAULT_HEX_CAP,
 ) -> str:
-    """Encode a single-segment submit PDU (hex). Raises if the text needs split."""
+    """Encode a single-segment submit PDU (hex).
+
+    ``relative_validity_period=None`` omits TP-VP. Values 0..255 are GSM
+    relative TP-VP octets; 0 means five minutes.
+    """
 
     lib = _lib.load()
     buf = ctypes.create_string_buffer(out_hex_cap)
-    status = lib.ct_pdu_encode_submit(
+    vp = -1 if relative_validity_period is None else int(relative_validity_period)
+    status = lib.ct_pdu_encode_submit_ex(
         _as_utf8(smsc),
         _as_utf8(destination),
         _as_utf8(text),
         int(dcs),
+        vp,
+        int(bool(request_status_report)),
         buf,
         out_hex_cap,
     )
@@ -123,18 +132,23 @@ def encode_submit_segments(
     smsc: str = "",
     dcs: int = DCS_UCS2,
     *,
+    relative_validity_period: Optional[int] = None,
+    request_status_report: bool = False,
     out_hex_cap: int = _DEFAULT_HEX_CAP,
 ) -> list[str]:
-    """Encode one or more submit PDUs; auto-splits with concat UDH when needed."""
+    """Encode submit PDUs with optional relative TP-VP and TP-SRR."""
 
     lib = _lib.load()
     buf = ctypes.create_string_buffer(out_hex_cap)
     count = ctypes.c_int(0)
-    status = lib.ct_pdu_encode_submit_segments(
+    vp = -1 if relative_validity_period is None else int(relative_validity_period)
+    status = lib.ct_pdu_encode_submit_segments_ex(
         _as_utf8(smsc),
         _as_utf8(destination),
         _as_utf8(text),
         int(dcs),
+        vp,
+        int(bool(request_status_report)),
         buf,
         out_hex_cap,
         ctypes.byref(count),

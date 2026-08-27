@@ -43,6 +43,14 @@ GSM 7-bit `UserData` is UTF-8. Characters outside the default alphabet + ESC ext
 
 On receive / list, if TP-UDHI is set, the UDH is **skipped** (`HasUdh == true`). Concat IEI `0x00` / `0x08` populate `IsConcatenated`, `ConcatRef`, `ConcatTotal`, `ConcatSeq`. `GsmModem.ListMessages` rejoins **complete** segment sets (`ConcatSeq == 0`, `IsReassembledConcat`). Incomplete parts remain separate.
 
+### Validity Period / Status Report
+
+Submit APIs omit TP-VP and TP-SRR by default. Set `relativeValidityPeriod` to
+`0..255` to add a GSM relative TP-VP (`0` means five minutes), and set
+`requestStatusReport: true` to set TP-SRR. These options are available on
+`Pdu.EncodeSubmit`, `Pdu.EncodeSubmitSegments`, and `GsmModem.Send`.
+This requests a report; delivery-report parsing is not yet implemented.
+
 ### Strings
 
 All text fields are **UTF-8** at the native boundary (`LPUTF8Str` / UTF-8 byte fields). Prefer ASCII digits for SMSC / destination addresses.

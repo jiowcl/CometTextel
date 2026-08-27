@@ -73,6 +73,16 @@ Type CtModemSendFn As Function CDecl ( _
 	ByVal dcs As Long, _
 	ByVal timeoutMs As Long _
 	) As Long
+Type CtModemSendExFn As Function CDecl ( _
+	ByVal modem As Any Ptr, _
+	ByVal smsc As ZString Ptr, _
+	ByVal destination As ZString Ptr, _
+	ByVal text As ZString Ptr, _
+	ByVal dcs As Long, _
+	ByVal relativeValidityPeriod As Long, _
+	ByVal requestStatusReport As Long, _
+	ByVal timeoutMs As Long _
+	) As Long
 Type CtModemListFn As Function CDecl ( _
 	ByVal modem As Any Ptr, _
 	ByVal outMessages As CtMessage Ptr, _
@@ -93,11 +103,32 @@ Type CtPduEncodeSubmitFn As Function CDecl ( _
 	ByVal out_hex As Any Ptr, _
 	ByVal out_hex_cap As UInteger _
 	) As Long
+Type CtPduEncodeSubmitExFn As Function CDecl ( _
+	ByVal smsc As ZString Ptr, _
+	ByVal destination As ZString Ptr, _
+	ByVal text As ZString Ptr, _
+	ByVal dcs As Long, _
+	ByVal relativeValidityPeriod As Long, _
+	ByVal requestStatusReport As Long, _
+	ByVal out_hex As Any Ptr, _
+	ByVal out_hex_cap As UInteger _
+	) As Long
 Type CtPduEncodeSubmitSegmentsFn As Function CDecl ( _
 	ByVal smsc As ZString Ptr, _
 	ByVal destination As ZString Ptr, _
 	ByVal text As ZString Ptr, _
 	ByVal dcs As Long, _
+	ByVal out_hex As Any Ptr, _
+	ByVal out_hex_cap As UInteger, _
+	ByVal out_count As Long Ptr _
+	) As Long
+Type CtPduEncodeSubmitSegmentsExFn As Function CDecl ( _
+	ByVal smsc As ZString Ptr, _
+	ByVal destination As ZString Ptr, _
+	ByVal text As ZString Ptr, _
+	ByVal dcs As Long, _
+	ByVal relativeValidityPeriod As Long, _
+	ByVal requestStatusReport As Long, _
 	ByVal out_hex As Any Ptr, _
 	ByVal out_hex_cap As UInteger, _
 	ByVal out_count As Long Ptr _
@@ -115,10 +146,13 @@ Dim Shared ct_modem_create As CtModemCreateFn = 0
 Dim Shared ct_modem_destroy As CtModemDestroyFn = 0
 Dim Shared ct_modem_open As CtModemOpenFn = 0
 Dim Shared ct_modem_send As CtModemSendFn = 0
+Dim Shared ct_modem_send_ex As CtModemSendExFn = 0
 Dim Shared ct_modem_list As CtModemListFn = 0
 Dim Shared ct_modem_delete As CtModemDeleteFn = 0
 Dim Shared ct_pdu_encode_submit As CtPduEncodeSubmitFn = 0
+Dim Shared ct_pdu_encode_submit_ex As CtPduEncodeSubmitExFn = 0
 Dim Shared ct_pdu_encode_submit_segments As CtPduEncodeSubmitSegmentsFn = 0
+Dim Shared ct_pdu_encode_submit_segments_ex As CtPduEncodeSubmitSegmentsExFn = 0
 Dim Shared ct_pdu_decode As CtPduDecodeFn = 0
 
 ' <summary>
@@ -284,6 +318,9 @@ Function CtInit(ByRef dllPath As String = "comettextel.dll") As Long
 	ct_modem_send = Cast(CtModemSendFn, CtBindExport("ct_modem_send"))
 	If ct_modem_send = 0 Then DyLibFree(CtLib) : CtLib = 0 : Return 0
 
+	ct_modem_send_ex = Cast(CtModemSendExFn, CtBindExport("ct_modem_send_ex"))
+	If ct_modem_send_ex = 0 Then DyLibFree(CtLib) : CtLib = 0 : Return 0
+
 	ct_modem_list = Cast(CtModemListFn, CtBindExport("ct_modem_list"))
 	If ct_modem_list = 0 Then DyLibFree(CtLib) : CtLib = 0 : Return 0
 
@@ -297,12 +334,18 @@ Function CtInit(ByRef dllPath As String = "comettextel.dll") As Long
 		Return 0
 	End If
 
+	ct_pdu_encode_submit_ex = Cast(CtPduEncodeSubmitExFn, CtBindExport("ct_pdu_encode_submit_ex"))
+	If ct_pdu_encode_submit_ex = 0 Then DyLibFree(CtLib) : CtLib = 0 : Return 0
+
 	ct_pdu_encode_submit_segments = Cast(CtPduEncodeSubmitSegmentsFn, CtBindExport("ct_pdu_encode_submit_segments"))
 
 	If ct_pdu_encode_submit_segments = 0 Then
 		DyLibFree(CtLib) : CtLib = 0
 		Return 0
 	End If
+
+	ct_pdu_encode_submit_segments_ex = Cast(CtPduEncodeSubmitSegmentsExFn, CtBindExport("ct_pdu_encode_submit_segments_ex"))
+	If ct_pdu_encode_submit_segments_ex = 0 Then DyLibFree(CtLib) : CtLib = 0 : Return 0
 
 	ct_pdu_decode = Cast(CtPduDecodeFn, CtBindExport("ct_pdu_decode"))
 
@@ -329,10 +372,13 @@ Sub CtShutdown()
 	ct_modem_destroy = 0
 	ct_modem_open = 0
 	ct_modem_send = 0
+	ct_modem_send_ex = 0
 	ct_modem_list = 0
 	ct_modem_delete = 0
 	ct_pdu_encode_submit = 0
+	ct_pdu_encode_submit_ex = 0
 	ct_pdu_encode_submit_segments = 0
+	ct_pdu_encode_submit_segments_ex = 0
 	ct_pdu_decode = 0
 End Sub
 
@@ -379,7 +425,9 @@ Function CtEncodeSubmit( _
 	ByRef text As String, _
 	ByRef serviceCenter As String, _
 	ByVal dcs As Long, _
-	ByVal pStatus As Long Ptr _
+	ByVal pStatus As Long Ptr, _
+	ByVal relativeValidityPeriod As Long = -1, _
+	ByVal requestStatusReport As Long = 0 _
 	) As String
 
 	If CtLib = 0 Then
@@ -395,7 +443,8 @@ Function CtEncodeSubmit( _
 	Dim As String dest = destination
 	Dim As String body = text
 
-	Dim As Long result = ct_pdu_encode_submit(StrPtr(smsc), StrPtr(dest), StrPtr(body), dcs, @hexbuf, cap)
+	Dim As Long result = ct_pdu_encode_submit_ex( _
+		StrPtr(smsc), StrPtr(dest), StrPtr(body), dcs, relativeValidityPeriod, requestStatusReport, @hexbuf, cap)
 
 	If pStatus <> 0 Then *pStatus = result
 	If result <> CT_OK Then Return ""
@@ -419,7 +468,9 @@ Function CtEncodeSubmitSegments( _
 	ByRef serviceCenter As String, _
 	ByVal dcs As Long, _
 	ByVal pStatus As Long Ptr, _
-	ByVal pOutCount As Long Ptr _
+	ByVal pOutCount As Long Ptr, _
+	ByVal relativeValidityPeriod As Long = -1, _
+	ByVal requestStatusReport As Long = 0 _
 	) As String
 
 	If CtLib = 0 Then
@@ -435,8 +486,8 @@ Function CtEncodeSubmitSegments( _
 	Dim As String dest = destination
 	Dim As String body = text
 
-	Dim As Long result = ct_pdu_encode_submit_segments( _
-		StrPtr(smsc), StrPtr(dest), StrPtr(body), dcs, StrPtr(hexbuf), cap, @count)
+	Dim As Long result = ct_pdu_encode_submit_segments_ex( _
+		StrPtr(smsc), StrPtr(dest), StrPtr(body), dcs, relativeValidityPeriod, requestStatusReport, StrPtr(hexbuf), cap, @count)
 
 	If pOutCount <> 0 Then *pOutCount = count
 	If pStatus <> 0 Then *pStatus = result
@@ -555,7 +606,9 @@ Function CtModemSend( _
 	ByRef text As String, _
 	ByRef serviceCenter As String = "", _
 	ByVal dcs As Long = CT_DCS_UCS2, _
-	ByVal timeoutMs As Long = 10000 _
+	ByVal timeoutMs As Long = 10000, _
+	ByVal relativeValidityPeriod As Long = -1, _
+	ByVal requestStatusReport As Long = 0 _
 	) As Long
 
 	If CtLib = 0 OrElse modem = 0 Then Return CT_ERR_NOT_OPEN
@@ -564,7 +617,8 @@ Function CtModemSend( _
 	Dim As String dest = destination
 	Dim As String body = text
 
-	Return ct_modem_send(modem, StrPtr(smsc), StrPtr(dest), StrPtr(body), dcs, timeoutMs)
+	Return ct_modem_send_ex(modem, StrPtr(smsc), StrPtr(dest), StrPtr(body), dcs, _
+		relativeValidityPeriod, requestStatusReport, timeoutMs)
 End Function
 
 ' <summary>

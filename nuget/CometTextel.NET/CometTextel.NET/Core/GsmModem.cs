@@ -40,6 +40,7 @@ namespace CometTextel.NET.Core
         /// Opens the port and initializes PDU mode.
         /// </summary>
         /// <param name="port">The port to open.</param>
+        /// <param name="baudRate">The baud rate to use.</param>
         public void Open(
             string port, 
             uint baudRate = 115200)
@@ -58,23 +59,30 @@ namespace CometTextel.NET.Core
         /// <param name="serviceCenter">The service center address.</param>
         /// <param name="coding">The data coding scheme.</param>
         /// <param name="timeoutMs">The timeout in milliseconds.</param>
+        /// <param name="relativeValidityPeriod">Optional GSM relative TP-VP octet.
+        /// Null omits TP-VP; 0 means five minutes.</param>
+        /// <param name="requestStatusReport">Whether to set TP-SRR on each segment.</param>
         public void Send(
             string destination,
             string text,
             string? serviceCenter = null,
             DataCoding coding = DataCoding.Ucs2,
-            int timeoutMs = 10000)
+            int timeoutMs = 10000,
+            byte? relativeValidityPeriod = null,
+            bool requestStatusReport = false)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
             ArgumentException.ThrowIfNullOrEmpty(destination);
             ArgumentNullException.ThrowIfNull(text);
 
-            Pdu.EnsureOk(NativeMethods.ct_modem_send(
+            Pdu.EnsureOk(NativeMethods.ct_modem_send_ex(
                 _handle,
                 serviceCenter ?? string.Empty,
                 destination,
                 text,
                 (int)coding,
+                relativeValidityPeriod.HasValue ? relativeValidityPeriod.Value : -1,
+                requestStatusReport ? 1 : 0,
                 timeoutMs));
         }
 

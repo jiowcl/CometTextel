@@ -119,6 +119,22 @@ CT_API int ct_modem_send(ct_modem* modem,
                          int timeout_ms);
 
 /**
+ * @brief Sends one SMS with explicit TP-VP / TP-SRR options.
+ * @param relative_validity_period -1 for no TP-VP, otherwise a GSM relative
+ *        TP-VP octet in the range 0..255 (0 means 5 minutes).
+ * @param request_status_report Non-zero to set TP-SRR.
+ * @return The status code.
+ */
+CT_API int ct_modem_send_ex(ct_modem* modem,
+                            const char* smsc,
+                            const char* destination,
+                            const char* text,
+                            int dcs,
+                            int relative_validity_period,
+                            int request_status_report,
+                            int timeout_ms);
+
+/**
  * @brief Lists stored messages into @p out (up to @p max_count).
  * @param modem The modem object.
  * @param out The destination message list.
@@ -154,6 +170,7 @@ CT_API int ct_modem_delete(ct_modem* modem, int index, int timeout_ms);
  * @param out_hex_cap The destination PDU hex string capacity.
  * @return CT_OK on success; writes NUL-terminated hex into @p out_hex.
  *
+ * @note The default API omits TP-VP and does not request a status report.
  * @note For @ref CT_DCS_GSM7, @p text is mapped with the GSM 03.38 default
  *       alphabet and ESC extension (`[]{}\\~^|€`, …). Unsupported glyphs
  *       return @c CT_ERR_ENCODE (use @ref CT_DCS_UCS2). Extension characters
@@ -165,6 +182,22 @@ CT_API int ct_pdu_encode_submit(const char* smsc,
                                 int dcs,
                                 char* out_hex,
                                 size_t out_hex_cap);
+
+/**
+ * @brief Encodes a submit PDU with explicit TP-VP / TP-SRR options.
+ * @param relative_validity_period -1 for no TP-VP, otherwise 0..255. Value
+ *        0 is a valid 5-minute relative validity period.
+ * @param request_status_report Non-zero to set TP-SRR.
+ * @return CT_OK on success; writes NUL-terminated hex into @p out_hex.
+ */
+CT_API int ct_pdu_encode_submit_ex(const char* smsc,
+                                   const char* destination,
+                                   const char* text,
+                                   int dcs,
+                                   int relative_validity_period,
+                                   int request_status_report,
+                                   char* out_hex,
+                                   size_t out_hex_cap);
 
 /**
  * @brief Encodes one or more submit PDUs (auto-splits with concat UDH when needed).
@@ -180,6 +213,22 @@ CT_API int ct_pdu_encode_submit_segments(const char* smsc,
                                          char* out_hex,
                                          size_t out_hex_cap,
                                          int* out_count);
+
+/**
+ * @brief Encodes submit PDUs with explicit TP-VP / TP-SRR options.
+ * @param relative_validity_period -1 for no TP-VP, otherwise 0..255.
+ * @param request_status_report Non-zero to set TP-SRR on every segment.
+ * @return CT_OK on success.
+ */
+CT_API int ct_pdu_encode_submit_segments_ex(const char* smsc,
+                                            const char* destination,
+                                            const char* text,
+                                            int dcs,
+                                            int relative_validity_period,
+                                            int request_status_report,
+                                            char* out_hex,
+                                            size_t out_hex_cap,
+                                            int* out_count);
 
 /**
  * @brief Decodes a PDU hex string into @p out (no modem I/O).

@@ -301,7 +301,17 @@ std::error_code append_submit_header(std::vector<std::uint8_t>& buf,
         buf.insert(buf.end(), smsc_bytes.begin(), smsc_bytes.end());
     }
 
-    buf.push_back(udhi ? std::uint8_t{0x51} : std::uint8_t{0x11});
+    // TP-VPF=00 means no TP-VP.  Relative TP-VP is selected only when the
+    // caller explicitly supplies a value; 0x00 is a real 5-minute value.
+    std::uint8_t first_octet = udhi ? std::uint8_t{0x41} : std::uint8_t{0x01};
+    if (message.request_status_report) {
+        first_octet = static_cast<std::uint8_t>(first_octet | 0x20U); // TP-SRR
+    }
+    if (message.relative_validity_period.has_value()) {
+        first_octet = static_cast<std::uint8_t>(first_octet | 0x10U); // TP-VPF=10
+    }
+
+    buf.push_back(first_octet);
     buf.push_back(0x00);
     buf.push_back(static_cast<std::uint8_t>(dest.size()));
     buf.push_back(0x91);
@@ -309,15 +319,19 @@ std::error_code append_submit_header(std::vector<std::uint8_t>& buf,
     {
         const std::string inverted = PduCodec::invert_digits(dest);
         std::vector<std::uint8_t> dest_bytes;
+
         if (const auto ec = PduCodec::hex_to_bytes(inverted, dest_bytes); ec) {
             return ec;
         }
+
         buf.insert(buf.end(), dest_bytes.begin(), dest_bytes.end());
     }
 
     buf.push_back(message.protocol_id);
     buf.push_back(static_cast<std::uint8_t>(message.coding));
-    buf.push_back(0x00);
+    if (message.relative_validity_period.has_value()) {
+        buf.push_back(*message.relative_validity_period);
+    }
     return {};
 }
 
@@ -739,7 +753,9 @@ std::error_code PduCodec::gsm7_to_utf8(std::string_view septets, std::string& ut
                 append_utf8(utf8, U' '); // lone ESC → space
                 break;
             }
+
             const auto ext = static_cast<std::uint8_t>(septets[++i] & 0x7F);
+
             if (ext == kGsmEsc) {
                 append_utf8(utf8, U' '); // reserved second ESC
             } else {
@@ -1106,6 +1122,9 @@ std::error_code PduCodec::decode(std::string_view pdu_hex, Message& message)
     const std::uint8_t mti = static_cast<std::uint8_t>(first_octet & 0x03U);
     const std::uint8_t vpf = static_cast<std::uint8_t>((first_octet >> 3) & 0x03U);
     const bool is_submit = (mti == 0x01U);
+    // In SMS-SUBMIT this bit is TP-SRR.  In SMS-DELIVER it is TP-SRI, so do
+    // not expose the latter as a request made by the sender.
+    message.request_status_report = is_submit && ((first_octet & 0x20U) != 0U);
 
     if (is_submit) {
         // SMS-SUBMIT carries TP-MR before the destination address.
@@ -1167,6 +1186,10 @@ std::error_code PduCodec::decode(std::string_view pdu_hex, Message& message)
 
         if (offset + vp_len > bytes.size()) {
             return make_error_code(Errc::DecodeFailure);
+        }
+        
+        if (vpf == 0x02) {
+            message.relative_validity_period = bytes[offset];
         }
         offset += vp_len;
     } else {

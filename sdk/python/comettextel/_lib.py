@@ -220,6 +220,18 @@ def load(path: Optional[str | Path] = None) -> ctypes.CDLL:
     ]
     loaded.ct_modem_send.restype = c_int
 
+    loaded.ct_modem_send_ex.argtypes = [
+        c_void_p,
+        c_char_p,
+        c_char_p,
+        c_char_p,
+        c_int,
+        c_int,
+        c_int,
+        c_int,
+    ]
+    loaded.ct_modem_send_ex.restype = c_int
+
     loaded.ct_modem_list.argtypes = [
         c_void_p,
         POINTER(CtMessage),
@@ -242,6 +254,18 @@ def load(path: Optional[str | Path] = None) -> ctypes.CDLL:
     ]
     loaded.ct_pdu_encode_submit.restype = c_int
 
+    loaded.ct_pdu_encode_submit_ex.argtypes = [
+        c_char_p,
+        c_char_p,
+        c_char_p,
+        c_int,
+        c_int,
+        c_int,
+        c_void_p,
+        c_size_t,
+    ]
+    loaded.ct_pdu_encode_submit_ex.restype = c_int
+
     loaded.ct_pdu_encode_submit_segments.argtypes = [
         c_char_p,
         c_char_p,
@@ -252,6 +276,19 @@ def load(path: Optional[str | Path] = None) -> ctypes.CDLL:
         POINTER(c_int),
     ]
     loaded.ct_pdu_encode_submit_segments.restype = c_int
+
+    loaded.ct_pdu_encode_submit_segments_ex.argtypes = [
+        c_char_p,
+        c_char_p,
+        c_char_p,
+        c_int,
+        c_int,
+        c_int,
+        c_void_p,
+        c_size_t,
+        POINTER(c_int),
+    ]
+    loaded.ct_pdu_encode_submit_segments_ex.restype = c_int
 
     loaded.ct_pdu_decode.argtypes = [c_char_p, POINTER(CtMessage)]
     loaded.ct_pdu_decode.restype = c_int

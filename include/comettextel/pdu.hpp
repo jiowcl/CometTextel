@@ -125,6 +125,9 @@ public:
      *       8-bit / UCS-2 ≤ 140 octets.
      *       Use @ref encode_segments to auto-split longer payloads.
      *       For GSM 7-bit, @ref Message::user_data is UTF-8.
+     *       By default no TP-VP is emitted; set @ref Message::relative_validity_period
+     *       to add a GSM relative validity period and @ref Message::request_status_report
+     *       to set TP-SRR.
      */
     [[nodiscard]] static std::error_code encode(const Message& message, std::string& pdu_hex);
 
@@ -141,6 +144,7 @@ public:
      *       a checksum of the payload is used.
      *       Per-segment payload with UDH: GSM 7-bit ≤ 153 septets; 8-bit / UCS-2 ≤ 134 octets.
      *       GSM 7-bit segment splits never break an ESC + extension septet pair.
+     *       TP-VP and TP-SRR options are copied to every generated segment.
      */
     [[nodiscard]] static std::error_code encode_segments(const Message& message,
                                                          std::vector<std::string>& pdu_hexes);

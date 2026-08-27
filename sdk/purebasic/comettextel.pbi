@@ -54,10 +54,13 @@ PrototypeC.i Proto_ct_modem_create()
 PrototypeC Proto_ct_modem_destroy(*modem)
 PrototypeC.l Proto_ct_modem_open(*modem, *port, baudRate.l)
 PrototypeC.l Proto_ct_modem_send(*modem, *smsc, *destination, *text, dcs.l, timeoutMs.l)
+PrototypeC.l Proto_ct_modem_send_ex(*modem, *smsc, *destination, *text, dcs.l, relativeValidityPeriod.l, requestStatusReport.l, timeoutMs.l)
 PrototypeC.l Proto_ct_modem_list(*modem, *outMessages, maxCount.l, *outCount, timeoutMs.l)
 PrototypeC.l Proto_ct_modem_delete(*modem, index.l, timeoutMs.l)
 PrototypeC.l Proto_ct_pdu_encode_submit(*smsc, *destination, *text, dcs.l, *out_hex, out_hex_cap.i)
+PrototypeC.l Proto_ct_pdu_encode_submit_ex(*smsc, *destination, *text, dcs.l, relativeValidityPeriod.l, requestStatusReport.l, *out_hex, out_hex_cap.i)
 PrototypeC.l Proto_ct_pdu_encode_submit_segments(*smsc, *destination, *text, dcs.l, *out_hex, out_hex_cap.i, *out_count)
+PrototypeC.l Proto_ct_pdu_encode_submit_segments_ex(*smsc, *destination, *text, dcs.l, relativeValidityPeriod.l, requestStatusReport.l, *out_hex, out_hex_cap.i, *out_count)
 PrototypeC.l Proto_ct_pdu_decode(*pdu_hex, *out)
 
 ; TODO: Using PureBasic's built-in functions.
@@ -76,10 +79,13 @@ Global ct_modem_create.Proto_ct_modem_create
 Global ct_modem_destroy.Proto_ct_modem_destroy
 Global ct_modem_open.Proto_ct_modem_open
 Global ct_modem_send.Proto_ct_modem_send
+Global ct_modem_send_ex.Proto_ct_modem_send_ex
 Global ct_modem_list.Proto_ct_modem_list
 Global ct_modem_delete.Proto_ct_modem_delete
 Global ct_pdu_encode_submit.Proto_ct_pdu_encode_submit
+Global ct_pdu_encode_submit_ex.Proto_ct_pdu_encode_submit_ex
 Global ct_pdu_encode_submit_segments.Proto_ct_pdu_encode_submit_segments
+Global ct_pdu_encode_submit_segments_ex.Proto_ct_pdu_encode_submit_segments_ex
 Global ct_pdu_decode.Proto_ct_pdu_decode
 
 ; <summary>
@@ -194,6 +200,10 @@ Procedure.i CtInit(dllPath.s = "comettextel.dll")
   If *fn = 0 : FreeLibrary(CtLib) : CtLib = 0 : ProcedureReturn 0 : EndIf
   ct_modem_send = *fn
 
+  *fn = CtBindExport("ct_modem_send_ex")
+  If *fn = 0 : FreeLibrary(CtLib) : CtLib = 0 : ProcedureReturn 0 : EndIf
+  ct_modem_send_ex = *fn
+
   *fn = CtBindExport("ct_modem_list")
   If *fn = 0 : FreeLibrary(CtLib) : CtLib = 0 : ProcedureReturn 0 : EndIf
   ct_modem_list = *fn
@@ -212,6 +222,10 @@ Procedure.i CtInit(dllPath.s = "comettextel.dll")
 
   ct_pdu_encode_submit = *fn
 
+  *fn = CtBindExport("ct_pdu_encode_submit_ex")
+  If *fn = 0 : FreeLibrary(CtLib) : CtLib = 0 : ProcedureReturn 0 : EndIf
+  ct_pdu_encode_submit_ex = *fn
+
   *fn = CtBindExport("ct_pdu_encode_submit_segments")
 
   If *fn = 0
@@ -221,6 +235,10 @@ Procedure.i CtInit(dllPath.s = "comettextel.dll")
   EndIf
 
   ct_pdu_encode_submit_segments = *fn
+
+  *fn = CtBindExport("ct_pdu_encode_submit_segments_ex")
+  If *fn = 0 : FreeLibrary(CtLib) : CtLib = 0 : ProcedureReturn 0 : EndIf
+  ct_pdu_encode_submit_segments_ex = *fn
 
   *fn = CtBindExport("ct_pdu_decode")
 
@@ -250,10 +268,13 @@ Procedure CtShutdown()
   ct_modem_destroy = 0
   ct_modem_open = 0
   ct_modem_send = 0
+  ct_modem_send_ex = 0
   ct_modem_list = 0
   ct_modem_delete = 0
   ct_pdu_encode_submit = 0
+  ct_pdu_encode_submit_ex = 0
   ct_pdu_encode_submit_segments = 0
+  ct_pdu_encode_submit_segments_ex = 0
   ct_pdu_decode = 0
 EndProcedure
 
@@ -366,7 +387,7 @@ EndProcedure
 ; <param name="dcs">long</param>
 ; <param name="*status">pointer</param>
 ; <returns>Returns string.</returns>
-Procedure.s CtEncodeSubmit(destination.s, text.s, serviceCenter.s, dcs.l, *status.Long)
+Procedure.s CtEncodeSubmit(destination.s, text.s, serviceCenter.s, dcs.l, *status.Long, relativeValidityPeriod.l = -1, requestStatusReport.l = 0)
   Protected *hex
   Protected *smsc
   Protected *dest
@@ -395,7 +416,7 @@ Procedure.s CtEncodeSubmit(destination.s, text.s, serviceCenter.s, dcs.l, *statu
   EndIf
 
   FillMemory(*hex, 1024)
-  result = ct_pdu_encode_submit(*smsc, *dest, *body, dcs, *hex, 1024)
+  result = ct_pdu_encode_submit_ex(*smsc, *dest, *body, dcs, relativeValidityPeriod, requestStatusReport, *hex, 1024)
 
   If result = #CT_OK
     hex = CtPeekAsciiZ(*hex, 1024)
@@ -423,7 +444,7 @@ EndProcedure
 ; <param name="*status">pointer</param>
 ; <param name="*outCount">pointer</param>
 ; <returns>Returns string.</returns>
-Procedure.s CtEncodeSubmitSegments(destination.s, text.s, serviceCenter.s, dcs.l, *status.Long, *outCount.Long)
+Procedure.s CtEncodeSubmitSegments(destination.s, text.s, serviceCenter.s, dcs.l, *status.Long, *outCount.Long, relativeValidityPeriod.l = -1, requestStatusReport.l = 0)
   Protected cap.i = 131072
   Protected *hex
   Protected *smsc
@@ -455,7 +476,7 @@ Procedure.s CtEncodeSubmitSegments(destination.s, text.s, serviceCenter.s, dcs.l
   EndIf
 
   FillMemory(*hex, cap)
-  result = ct_pdu_encode_submit_segments(*smsc, *dest, *body, dcs, *hex, cap, @count)
+  result = ct_pdu_encode_submit_segments_ex(*smsc, *dest, *body, dcs, relativeValidityPeriod, requestStatusReport, *hex, cap, @count)
 
   If *outCount
     *outCount\l = count
@@ -569,7 +590,7 @@ EndProcedure
 ; <param name="dcs">long</param>
 ; <param name="timeoutMs">long</param>
 ; <returns>Returns long.</returns>
-Procedure.l CtModemSend(*modem, destination.s, text.s, serviceCenter.s = "", dcs.l = #CT_DCS_UCS2, timeoutMs.l = 10000)
+Procedure.l CtModemSend(*modem, destination.s, text.s, serviceCenter.s = "", dcs.l = #CT_DCS_UCS2, timeoutMs.l = 10000, relativeValidityPeriod.l = -1, requestStatusReport.l = 0)
   Protected *smsc
   Protected *dest
   Protected *body
@@ -590,7 +611,7 @@ Procedure.l CtModemSend(*modem, destination.s, text.s, serviceCenter.s = "", dcs
     ProcedureReturn #CT_ERR_UNKNOWN
   EndIf
 
-  result = ct_modem_send(*modem, *smsc, *dest, *body, dcs, timeoutMs)
+  result = ct_modem_send_ex(*modem, *smsc, *dest, *body, dcs, relativeValidityPeriod, requestStatusReport, timeoutMs)
 
   FreeMemory(*smsc)
   FreeMemory(*dest)

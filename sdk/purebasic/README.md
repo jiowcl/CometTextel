@@ -95,6 +95,8 @@ No arguments on `pdu_example` runs a self-check:
 - `CtMessage` must stay packed like `struct ct_message` (`Align #PB_Structure_AlignC`).
 - `ct_pdu_encode_submit` is single-segment; `ct_pdu_encode_submit_segments` auto-splits with concat UDH.
 - `#CT_DCS_GSM7` uses GSM 03.38 (UTF-8 in/out, ESC extension); alphabet outliers need `#CT_DCS_UCS2`.
+- `CtEncodeSubmit*` / `CtModemSend` omit TP-VP by default. Pass `relativeValidityPeriod` 0..255
+  to add relative TP-VP (`0` = 5 minutes), and `requestStatusReport = 1` to set TP-SRR.
 
 Do not reimplement PDU codecs in PureBasic. If the C ABI changes, update `comettextel.pbi` only.
 

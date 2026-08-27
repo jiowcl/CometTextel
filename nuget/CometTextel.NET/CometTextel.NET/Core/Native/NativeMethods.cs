@@ -135,6 +135,29 @@ namespace CometTextel.NET.Core.Native
             int timeoutMs);
 
         /// <summary>
+        /// Sends an SMS with explicit relative TP-VP and TP-SRR options.
+        /// </summary>
+        /// <param name="modem">The modem to send the message to.</param>
+        /// <param name="smsc">The SMSC address.</param>
+        /// <param name="destination">The destination address.</param>
+        /// <param name="text">The text to send.</param>
+        /// <param name="dcs">The data coding scheme.</param>
+        /// <param name="relativeValidityPeriod">The relative validity period.</param>
+        /// <param name="requestStatusReport">The request status report.</param>
+        /// <param name="timeoutMs">The timeout in milliseconds.</param>
+        /// <returns>The error code.</returns>
+        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int ct_modem_send_ex(
+            IntPtr modem,
+            [MarshalAs(UnmanagedType.LPUTF8Str)] string? smsc,
+            [MarshalAs(UnmanagedType.LPUTF8Str)] string destination,
+            [MarshalAs(UnmanagedType.LPUTF8Str)] string text,
+            int dcs,
+            int relativeValidityPeriod,
+            int requestStatusReport,
+            int timeoutMs);
+
+        /// <summary>
         /// Lists messages from the modem.
         /// </summary>
         /// <param name="modem">The modem to list messages from.</param>
@@ -180,14 +203,70 @@ namespace CometTextel.NET.Core.Native
             UIntPtr outHexCap);
 
         /// <summary>
+        /// Encodes a submit PDU with explicit relative TP-VP and TP-SRR options.
+        /// Pass -1 for <paramref name="relativeValidityPeriod"/> to omit TP-VP.
+        /// </summary>
+        /// <param name="smsc">The SMSC address.</param>
+        /// <param name="destination">The destination address.</param>
+        /// <param name="text">The text to encode.</param>
+        /// <param name="dcs">The data coding scheme.</param>
+        /// <param name="relativeValidityPeriod">The relative validity period.</param>
+        /// <param name="requestStatusReport">The request status report.</param>
+        /// <param name="outHex">The encoded PDU hex string.</param>
+        /// <param name="outHexCap">The capacity of the output buffer.</param>
+        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int ct_pdu_encode_submit_ex(
+            [MarshalAs(UnmanagedType.LPUTF8Str)] string? smsc,
+            [MarshalAs(UnmanagedType.LPUTF8Str)] string destination,
+            [MarshalAs(UnmanagedType.LPUTF8Str)] string text,
+            int dcs,
+            int relativeValidityPeriod,
+            int requestStatusReport,
+            byte[] outHex,
+            UIntPtr outHexCap);
+
+        /// <summary>
         /// Encodes one or more submit PDUs (newline-separated hex). Auto-splits with concat UDH.
         /// </summary>
+        /// <param name="smsc">The SMSC address.</param>
+        /// <param name="destination">The destination address.</param>
+        /// <param name="text">The text to encode.</param>
+        /// <param name="dcs">The data coding scheme.</param>
+        /// <param name="outHex">The encoded PDU hex string.</param>
+        /// <param name="outHexCap">The capacity of the output buffer.</param>
+        /// <param name="outCount">The number of PDU hex strings encoded.</param>
+        /// <returns>The error code.</returns>
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
         public static extern int ct_pdu_encode_submit_segments(
             [MarshalAs(UnmanagedType.LPUTF8Str)] string? smsc,
             [MarshalAs(UnmanagedType.LPUTF8Str)] string destination,
             [MarshalAs(UnmanagedType.LPUTF8Str)] string text,
             int dcs,
+            byte[] outHex,
+            UIntPtr outHexCap,
+            out int outCount);
+
+        /// <summary>
+        /// Encodes submit PDUs with explicit relative TP-VP and TP-SRR options.
+        /// </summary>
+        /// <param name="smsc">The SMSC address.</param>
+        /// <param name="destination">The destination address.</param>
+        /// <param name="text">The text to encode.</param>
+        /// <param name="dcs">The data coding scheme.</param>
+        /// <param name="relativeValidityPeriod">The relative validity period.</param>
+        /// <param name="requestStatusReport">The request status report.</param>
+        /// <param name="outHex">The encoded PDU hex string.</param>
+        /// <param name="outHexCap">The capacity of the output buffer.</param>
+        /// <param name="outCount">The number of PDU hex strings encoded.</param>
+        /// <returns>The error code.</returns>
+        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int ct_pdu_encode_submit_segments_ex(
+            [MarshalAs(UnmanagedType.LPUTF8Str)] string? smsc,
+            [MarshalAs(UnmanagedType.LPUTF8Str)] string destination,
+            [MarshalAs(UnmanagedType.LPUTF8Str)] string text,
+            int dcs,
+            int relativeValidityPeriod,
+            int requestStatusReport,
             byte[] outHex,
             UIntPtr outHexCap,
             out int outCount);

@@ -87,6 +87,34 @@ public sealed class PduSmokeTests
     }
 
     [Fact]
+    public void EncodeSubmit_Default_OmitsValidityPeriod()
+    {
+        string hex = Pdu.EncodeSubmit(
+            "886912345678", "Hi", "886932000000", DataCoding.Gsm7Bit);
+        byte[] raw = Convert.FromHexString(hex);
+        int firstOctetOffset = 1 + raw[0];
+
+        Assert.Equal(0x01, raw[firstOctetOffset]);
+    }
+
+    [Fact]
+    public void EncodeSubmit_RelativeValidity_AndStatusReport()
+    {
+        string hex = Pdu.EncodeSubmit(
+            "886912345678",
+            "Hi",
+            "886932000000",
+            DataCoding.Gsm7Bit,
+            relativeValidityPeriod: 0x00,
+            requestStatusReport: true);
+        byte[] raw = Convert.FromHexString(hex);
+        int firstOctetOffset = 1 + raw[0];
+
+        Assert.Equal(0x31, raw[firstOctetOffset]);
+        Assert.Equal("Hi", Pdu.Decode(hex).UserData);
+    }
+
+    [Fact]
     public void Decode_EmptyHex_Throws()
     {
         Assert.ThrowsAny<ArgumentException>(() => Pdu.Decode(""));

@@ -19,22 +19,29 @@ namespace CometTextel.NET.Core
         /// <param name="text">The message text.</param>
         /// <param name="serviceCenter">The service center address.</param>
         /// <param name="coding">The data coding scheme.</param>
+        /// <param name="relativeValidityPeriod">Optional GSM relative TP-VP octet.
+        /// Null omits TP-VP; 0 means five minutes.</param>
+        /// <param name="requestStatusReport">Whether to set TP-SRR.</param>
         /// <returns>The encoded PDU hex string.</returns>
         public static string EncodeSubmit(
             string destination,
             string text,
             string? serviceCenter = null,
-            DataCoding coding = DataCoding.Ucs2)
+            DataCoding coding = DataCoding.Ucs2,
+            byte? relativeValidityPeriod = null,
+            bool requestStatusReport = false)
         {
             ArgumentException.ThrowIfNullOrEmpty(destination);
             ArgumentNullException.ThrowIfNull(text);
 
             byte[] buffer = new byte[1024];
-            int status = NativeMethods.ct_pdu_encode_submit(
+            int status = NativeMethods.ct_pdu_encode_submit_ex(
                 serviceCenter ?? string.Empty,
                 destination,
                 text,
                 (int)coding,
+                relativeValidityPeriod.HasValue ? relativeValidityPeriod.Value : -1,
+                requestStatusReport ? 1 : 0,
                 buffer,
                 (UIntPtr)buffer.Length);
 
@@ -57,22 +64,29 @@ namespace CometTextel.NET.Core
         /// <param name="text">The message text.</param>
         /// <param name="serviceCenter">The service center address.</param>
         /// <param name="coding">The data coding scheme.</param>
+        /// <param name="relativeValidityPeriod">Optional GSM relative TP-VP octet.
+        /// Null omits TP-VP; 0 means five minutes.</param>
+        /// <param name="requestStatusReport">Whether to set TP-SRR on each segment.</param>
         /// <returns>The encoded PDU hex strings.</returns>
         public static string[] EncodeSubmitSegments(
             string destination,
             string text,
             string? serviceCenter = null,
-            DataCoding coding = DataCoding.Ucs2)
+            DataCoding coding = DataCoding.Ucs2,
+            byte? relativeValidityPeriod = null,
+            bool requestStatusReport = false)
         {
             ArgumentException.ThrowIfNullOrEmpty(destination);
             ArgumentNullException.ThrowIfNull(text);
 
             byte[] buffer = new byte[131072];
-            int status = NativeMethods.ct_pdu_encode_submit_segments(
+            int status = NativeMethods.ct_pdu_encode_submit_segments_ex(
                 serviceCenter ?? string.Empty,
                 destination,
                 text,
                 (int)coding,
+                relativeValidityPeriod.HasValue ? relativeValidityPeriod.Value : -1,
+                requestStatusReport ? 1 : 0,
                 buffer,
                 (UIntPtr)buffer.Length,
                 out int count);
@@ -114,6 +128,7 @@ namespace CometTextel.NET.Core
             ArgumentException.ThrowIfNullOrEmpty(pduHex);
             int status = NativeMethods.ct_pdu_decode(pduHex, out var native);
             EnsureOk(status);
+            
             return SmsMessage.FromNative(native);
         }
 

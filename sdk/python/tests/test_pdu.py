@@ -112,6 +112,31 @@ def test_gsm7_rejects_cjk() -> None:
         encode_submit("886912345678", "你好", "886932000000", DCS_GSM7)
 
 
+def test_submit_defaults_to_no_validity_period() -> None:
+    text = "Hi"
+    hex_pdu = encode_submit("886912345678", text, "886932000000", DCS_GSM7)
+    raw = bytes.fromhex(hex_pdu)
+    first_octet_offset = 1 + raw[0]
+    assert raw[first_octet_offset] == 0x01
+
+
+def test_submit_relative_validity_and_status_report() -> None:
+    text = "Hi"
+    hex_pdu = encode_submit(
+        "886912345678",
+        text,
+        "886932000000",
+        DCS_GSM7,
+        relative_validity_period=0x00,
+        request_status_report=True,
+    )
+    raw = bytes.fromhex(hex_pdu)
+    first_octet_offset = 1 + raw[0]
+    assert raw[first_octet_offset] == 0x31
+    decoded = decode(hex_pdu)
+    assert decoded.user_data == text
+
+
 def test_gsm7_escape_forces_concat() -> None:
     # 159×A + € => 161 septets → two segments under encode_submit_segments.
     text = ("A" * 159) + "€"

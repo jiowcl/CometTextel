@@ -82,6 +82,31 @@ namespace {
 }
 
 /**
+ * @brief Apply submit options to a CometTextel message.
+ * @param message The CometTextel message.
+ * @param relative_validity_period The relative validity period.
+ * @param request_status_report The request status report.
+ * @return True if the options were applied successfully, false otherwise.
+ */
+[[nodiscard]] bool apply_submit_options(comettextel::Message& message,
+                                        int relative_validity_period,
+                                        int request_status_report)
+{
+    if (relative_validity_period < -1 || relative_validity_period > 255) {
+        return false;
+    }
+
+    message.relative_validity_period =
+        relative_validity_period < 0
+            ? std::nullopt
+            : std::optional<std::uint8_t>{
+                  static_cast<std::uint8_t>(relative_validity_period)};
+    message.request_status_report = request_status_report != 0;
+
+    return true;
+}
+
+/**
  * @brief Copy a string to a buffer.
  * @param dest The destination buffer.
  * @param dest_cap The destination buffer capacity.
@@ -223,6 +248,31 @@ int ct_modem_send(ct_modem* modem,
                   int dcs,
                   int timeout_ms)
 {
+    return ct_modem_send_ex(
+        modem, smsc, destination, text, dcs, -1, 0, timeout_ms);
+}
+
+/**
+ * @brief Send a message using the modem with explicit relative TP-VP and TP-SRR options.
+ * @param modem The modem object.
+ * @param smsc The service center address.
+ * @param destination The destination address.
+ * @param text The message text.
+ * @param dcs The data coding scheme.
+ * @param relative_validity_period The relative validity period.
+ * @param request_status_report The request status report.
+ * @param timeout_ms The timeout in milliseconds.
+ * @return The C API status code.
+ */
+int ct_modem_send_ex(ct_modem* modem,
+                     const char* smsc,
+                     const char* destination,
+                     const char* text,
+                     int dcs,
+                     int relative_validity_period,
+                     int request_status_report,
+                     int timeout_ms)
+{
     if (modem == nullptr || destination == nullptr || text == nullptr) {
         return CT_ERR_INVALID_ARGUMENT;
     }
@@ -233,8 +283,11 @@ int ct_modem_send(ct_modem* modem,
     message.user_data = text;
     message.coding = map_dcs(dcs);
 
-    const auto timeout = std::chrono::milliseconds(timeout_ms > 0 ? timeout_ms : 10000);
+    if (!apply_submit_options(message, relative_validity_period, request_status_report)) {
+        return CT_ERR_INVALID_ARGUMENT;
+    }
 
+    const auto timeout = std::chrono::milliseconds(timeout_ms > 0 ? timeout_ms : 10000);
     return map_error(modem->impl.send_message(message, nullptr, timeout));
 }
 
@@ -324,6 +377,31 @@ int ct_pdu_encode_submit(const char* smsc,
                          char* out_hex,
                          size_t out_hex_cap)
 {
+    return ct_pdu_encode_submit_ex(
+        smsc, destination, text, dcs, -1, 0, out_hex, out_hex_cap);
+}
+
+/**
+ * @brief Encode a PDU submit message with explicit relative TP-VP and TP-SRR options.
+ * @param smsc The service center address.
+ * @param destination The destination address.
+ * @param text The message text.
+ * @param dcs The data coding scheme.
+ * @param relative_validity_period The relative validity period.
+ * @param request_status_report The request status report.
+ * @param out_hex The destination PDU hex string.
+ * @param out_hex_cap The destination PDU hex string capacity.
+ * @return The C API status code.
+ */
+int ct_pdu_encode_submit_ex(const char* smsc,
+                            const char* destination,
+                            const char* text,
+                            int dcs,
+                            int relative_validity_period,
+                            int request_status_report,
+                            char* out_hex,
+                            size_t out_hex_cap)
+{
     if (destination == nullptr || text == nullptr || out_hex == nullptr || out_hex_cap == 0) {
         return CT_ERR_INVALID_ARGUMENT;
     }
@@ -333,6 +411,10 @@ int ct_pdu_encode_submit(const char* smsc,
     message.peer_address = destination;
     message.user_data = text;
     message.coding = map_dcs(dcs);
+
+    if (!apply_submit_options(message, relative_validity_period, request_status_report)) {
+        return CT_ERR_INVALID_ARGUMENT;
+    }
 
     std::string hex;
 
@@ -368,21 +450,51 @@ int ct_pdu_encode_submit_segments(const char* smsc,
                                   size_t out_hex_cap,
                                   int* out_count)
 {
+    return ct_pdu_encode_submit_segments_ex(
+        smsc, destination, text, dcs, -1, 0, out_hex, out_hex_cap, out_count);
+}
+
+/**
+ * @brief Encode one or more submit PDUs (newline-separated hex) with explicit relative TP-VP and TP-SRR options.
+ * @param smsc The service center address.
+ * @param destination The destination address.
+ * @param text The message text.
+ * @param dcs The data coding scheme.
+ * @param relative_validity_period The relative validity period.
+ * @param request_status_report The request status report.
+ * @param out_hex The destination PDU hex string.
+ * @param out_hex_cap The destination PDU hex string capacity.
+ * @param out_count The number of PDU hex strings encoded.
+ * @return The C API status code.
+ */
+int ct_pdu_encode_submit_segments_ex(const char* smsc,
+                                     const char* destination,
+                                     const char* text,
+                                     int dcs,
+                                     int relative_validity_period,
+                                     int request_status_report,
+                                     char* out_hex,
+                                     size_t out_hex_cap,
+                                     int* out_count)
+{
     if (destination == nullptr || text == nullptr || out_hex == nullptr || out_hex_cap == 0 ||
         out_count == nullptr) {
         return CT_ERR_INVALID_ARGUMENT;
     }
 
     *out_count = 0;
-
     comettextel::Message message;
     message.service_center = smsc != nullptr ? smsc : "";
     message.peer_address = destination;
     message.user_data = text;
     message.coding = map_dcs(dcs);
 
+    if (!apply_submit_options(message, relative_validity_period, request_status_report)) {
+        return CT_ERR_INVALID_ARGUMENT;
+    }
+
     std::vector<std::string> hexes;
-    
+
     if (const auto ec = comettextel::PduCodec::encode_segments(message, hexes); ec) {
         return map_error(ec);
     }
@@ -402,6 +514,7 @@ int ct_pdu_encode_submit_segments(const char* smsc,
 
     std::memcpy(out_hex, joined.c_str(), joined.size() + 1);
     *out_count = static_cast<int>(hexes.size());
+    
     return CT_OK;
 }
 
