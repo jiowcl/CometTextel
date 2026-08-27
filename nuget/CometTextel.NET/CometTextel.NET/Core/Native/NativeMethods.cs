@@ -14,6 +14,39 @@ namespace CometTextel.NET.Core.Native
         // DLL name for the CometTextel library.
         internal const string DllName = "comettextel";
 
+        // Legacy API version.
+        internal const int LegacyApiVersion = 1;
+
+        // Status report API version.
+        internal const int StatusReportApiVersion = 2;
+
+        /// <summary>
+        /// Returns the native C ABI feature version.
+        /// </summary>
+        /// <returns>The native C ABI feature version.</returns>
+        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl,
+            EntryPoint = "ct_api_version")]
+        private static extern int ct_api_version_native();
+
+        /// <summary>
+        /// Tries to get the native C ABI feature version.
+        /// </summary>
+        /// <param name="version">The native C ABI feature version.</param>
+        /// <returns>True if the native C ABI feature version was successfully retrieved; otherwise, false.</returns>
+        internal static bool TryGetApiVersion(out int version)
+        {
+            try
+            {
+                version = ct_api_version_native();
+                return true;
+            }
+            catch (EntryPointNotFoundException)
+            {
+                version = LegacyApiVersion;
+                return false;
+            }
+        }
+
         /// <summary>
         /// Blittable mirror of <c>ct_message</c> (UTF-8 byte fields).
         /// </summary>

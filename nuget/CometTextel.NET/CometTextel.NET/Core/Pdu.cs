@@ -13,6 +13,19 @@ namespace CometTextel.NET.Core
     public static class Pdu
     {
         /// <summary>
+        /// Native C ABI feature version. Legacy libraries without the version
+        /// export are reported as version 1.
+        /// </summary>
+        public static int ApiVersion
+        {
+            get
+            {
+                NativeMethods.TryGetApiVersion(out int version);
+                return version;
+            }
+        }
+
+        /// <summary>
         /// Encode a PDU submit message.
         /// </summary>
         /// <param name="destination">The destination address.</param>
@@ -141,7 +154,30 @@ namespace CometTextel.NET.Core
             string pduHex)
         {
             ArgumentException.ThrowIfNullOrEmpty(pduHex);
-            int status = NativeMethods.ct_pdu_decode_status_report(pduHex, out var native);
+
+            bool hasVersionExport = NativeMethods.TryGetApiVersion(out int apiVersion);
+            
+            if (!hasVersionExport || apiVersion < NativeMethods.StatusReportApiVersion)
+            {
+                throw new CometTextelException(
+                    Enums.ErrUnsupported,
+                    $"native C ABI version {apiVersion} does not provide Status Report decoding");
+            }
+
+            int status;
+            NativeMethods.CtStatusReport native;
+
+            try
+            {
+                status = NativeMethods.ct_pdu_decode_status_report(pduHex, out native);
+            }
+            catch (EntryPointNotFoundException)
+            {
+                throw new CometTextelException(
+                    Enums.ErrUnsupported,
+                    "native C ABI does not export ct_pdu_decode_status_report");
+            }
+
             EnsureOk(status);
             
             return StatusReport.FromNative(native);

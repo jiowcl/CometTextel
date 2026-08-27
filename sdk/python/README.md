@@ -139,6 +139,10 @@ report = decode_status_report(
 print(report.message_reference, hex(report.tp_status), report.recipient_address)
 ```
 
+`api_version()` reports the native C ABI feature version. A legacy DLL without
+the version export is treated as version 1; Status Report decoding then raises
+`CometTextelError` with `Status.UNSUPPORTED` while existing APIs remain usable.
+
 ### Validity Period / Status Report
 
 The default submit APIs omit TP-VP, allowing the SMSC to apply its default

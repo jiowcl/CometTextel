@@ -40,6 +40,8 @@ Const CT_ERR_UNKNOWN As Long = 100
 Const CT_DCS_GSM7 As Long = 0
 Const CT_DCS_8BIT As Long = 4
 Const CT_DCS_UCS2 As Long = 8
+Const CT_API_VERSION_LEGACY As Long = 1
+Const CT_API_VERSION_STATUS_REPORT As Long = 2
 
 /' Layout must match struct ct_message in c_api.h (MSVC x64 C alignment).
    Use UByte arrays — ZString * N is NOT the same size as char[N]. '/
@@ -67,6 +69,7 @@ Type CtStatusReport
 End Type
 
 Type CtStatusStringFn As Function CDecl (ByVal status As Long) As ZString Ptr
+Type CtApiVersionFn As Function CDecl () As Long
 Type CtModemCreateFn As Function CDecl () As Any Ptr
 Type CtModemDestroyFn As Sub CDecl (ByVal modem As Any Ptr)
 Type CtModemOpenFn As Function CDecl ( _
@@ -154,7 +157,9 @@ Type CtPduDecodeStatusReportFn As Function CDecl ( _
 Dim Shared CtLib As Any Ptr = 0
 Dim Shared CtLoadError As String
 Dim Shared CtLoadedPath As String
+Dim Shared CtApiVersion As Long = CT_API_VERSION_LEGACY
 Dim Shared ct_status_string As CtStatusStringFn = 0
+Dim Shared ct_api_version As CtApiVersionFn = 0
 Dim Shared ct_modem_create As CtModemCreateFn = 0
 Dim Shared ct_modem_destroy As CtModemDestroyFn = 0
 Dim Shared ct_modem_open As CtModemOpenFn = 0
@@ -313,6 +318,15 @@ Function CtInit(ByRef dllPath As String = "comettextel.dll") As Long
 		Return 0
 	End If
 
+	' Added in C ABI version 2. Legacy DLLs do not export it.
+	ct_api_version = Cast(CtApiVersionFn, DyLibSymbol(CtLib, "ct_api_version"))
+
+	If ct_api_version <> 0 Then
+		CtApiVersion = ct_api_version()
+	Else
+		CtApiVersion = CT_API_VERSION_LEGACY
+	End If
+
 	ct_status_string = Cast(CtStatusStringFn, CtBindExport("ct_status_string"))
 
 	If ct_status_string = 0 Then
@@ -368,8 +382,8 @@ Function CtInit(ByRef dllPath As String = "comettextel.dll") As Long
 		Return 0
 	End If
 
-	ct_pdu_decode_status_report = Cast(CtPduDecodeStatusReportFn, CtBindExport("ct_pdu_decode_status_report"))
-	If ct_pdu_decode_status_report = 0 Then DyLibFree(CtLib) : CtLib = 0 : Return 0
+	' Added in C ABI version 2. Keep this export optional for legacy DLLs.
+	ct_pdu_decode_status_report = Cast(CtPduDecodeStatusReportFn, DyLibSymbol(CtLib, "ct_pdu_decode_status_report"))
 
 	Return 1
 End Function
@@ -398,7 +412,17 @@ Sub CtShutdown()
 	ct_pdu_encode_submit_segments_ex = 0
 	ct_pdu_decode = 0
 	ct_pdu_decode_status_report = 0
+	ct_api_version = 0
+	CtApiVersion = CT_API_VERSION_LEGACY
 End Sub
+
+' <summary>
+' CtGetApiVersion
+' </summary>
+' <returns>Returns Long.</returns>
+Function CtGetApiVersion() As Long
+	Return CtApiVersion
+End Function
 
 ' <summary>
 ' CtStatusString
@@ -539,6 +563,9 @@ End Function
 Function CtDecodeStatusReport(ByRef pduHex As String, ByVal report As CtStatusReport Ptr) As Long
 	If CtLib = 0 Then Return CT_ERR_NOT_OPEN
 	If report = 0 Then Return CT_ERR_INVALID_ARGUMENT
+	If CtApiVersion < CT_API_VERSION_STATUS_REPORT OrElse ct_pdu_decode_status_report = 0 Then
+		Return CT_ERR_UNSUPPORTED
+	End If
 
 	Dim As String pdu = pduHex
 	Clear *report, 0, SizeOf(CtStatusReport)

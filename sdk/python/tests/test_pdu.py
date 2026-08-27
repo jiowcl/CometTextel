@@ -16,6 +16,7 @@ from comettextel import (  # noqa: E402
     DCS_GSM7,
     DCS_UCS2,
     CometTextelError,
+    api_version,
     decode,
     decode_status_report,
     encode_submit,
@@ -155,3 +156,7 @@ def test_status_report_decode() -> None:
     assert report.recipient_address == "886912345678"
     assert report.service_timestamp == "12050714085432"
     assert report.discharge_time == "12050714085432"
+
+
+def test_api_version() -> None:
+    assert api_version() >= 2

@@ -10,6 +10,7 @@ Code released under the MIT license.
 from __future__ import annotations
 
 from .errors import CometTextelError, Status
+from . import _lib
 from .modem import GsmModem
 from .pdu import (
     DCS_8BIT,
@@ -38,6 +39,9 @@ __all__ = [
     "encode_submit",
     "encode_submit_segments",
     "status_string",
+    "api_version",
 ]
 
 __version__ = "1.5.0"
+
+api_version = _lib.api_version

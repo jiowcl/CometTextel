@@ -190,8 +190,16 @@ def decode_status_report(pdu_hex: str) -> StatusReport:
     """Decode an SMS-STATUS-REPORT PDU."""
 
     lib = _lib.load()
+    decoder = getattr(lib, "ct_pdu_decode_status_report", None)
+    if decoder is None:
+        raise CometTextelError(
+            Status.UNSUPPORTED,
+            "ct_pdu_decode_status_report",
+            f"native C ABI version {_lib.api_version()} does not provide Status Report decoding",
+        )
+
     out = _lib.CtStatusReport()
-    status = lib.ct_pdu_decode_status_report(_as_utf8(pdu_hex.strip()), ctypes.byref(out))
+    status = decoder(_as_utf8(pdu_hex.strip()), ctypes.byref(out))
     _check(status, "ct_pdu_decode_status_report")
     return StatusReport(
         message_reference=int(out.message_reference),

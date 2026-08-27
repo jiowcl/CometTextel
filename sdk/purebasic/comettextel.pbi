@@ -33,6 +33,8 @@ CompilerEndIf
 #CT_DCS_GSM7 = 0
 #CT_DCS_8BIT = 4
 #CT_DCS_UCS2 = 8
+#CT_API_VERSION_LEGACY = 1
+#CT_API_VERSION_STATUS_REPORT = 2
 
 ; Layout must match struct ct_message in c_api.h (C alignment).
 Structure CtMessage Align #PB_Structure_AlignC
@@ -59,6 +61,7 @@ Structure CtStatusReport Align #PB_Structure_AlignC
 EndStructure
 
 PrototypeC.i Proto_ct_status_string(status.l)
+PrototypeC.l Proto_ct_api_version()
 PrototypeC.i Proto_ct_modem_create()
 PrototypeC Proto_ct_modem_destroy(*modem)
 PrototypeC.l Proto_ct_modem_open(*modem, *port, baudRate.l)
@@ -84,7 +87,9 @@ EndImport
 Global CtLib.i = 0
 Global CtLoadError.s = ""
 Global CtLoadedPath.s = ""
+Global CtApiVersion.l = #CT_API_VERSION_LEGACY
 Global ct_status_string.Proto_ct_status_string
+Global ct_api_version.Proto_ct_api_version
 Global ct_modem_create.Proto_ct_modem_create
 Global ct_modem_destroy.Proto_ct_modem_destroy
 Global ct_modem_open.Proto_ct_modem_open
@@ -185,6 +190,17 @@ Procedure.i CtInit(dllPath.s = "comettextel.dll")
     ProcedureReturn 0
   EndIf
 
+  ; Added in C ABI version 2. Legacy DLLs do not export it.
+  *fn = GetProcAddress(CtLib, "ct_api_version")
+  
+  If *fn <> 0
+    ct_api_version = *fn
+    CtApiVersion = ct_api_version()
+  Else
+    ct_api_version = 0
+    CtApiVersion = #CT_API_VERSION_LEGACY
+  EndIf
+
   *fn = CtBindExport("ct_status_string")
 
   If *fn = 0
@@ -261,9 +277,8 @@ Procedure.i CtInit(dllPath.s = "comettextel.dll")
   
   ct_pdu_decode = *fn
 
-  *fn = CtBindExport("ct_pdu_decode_status_report")
-  If *fn = 0 : FreeLibrary(CtLib) : CtLib = 0 : ProcedureReturn 0 : EndIf
-  ct_pdu_decode_status_report = *fn
+  ; Added in C ABI version 2. Keep this export optional for legacy DLLs.
+  ct_pdu_decode_status_report = GetProcAddress(CtLib, "ct_pdu_decode_status_report")
 
   ProcedureReturn 1
 EndProcedure
@@ -292,6 +307,16 @@ Procedure CtShutdown()
   ct_pdu_encode_submit_segments_ex = 0
   ct_pdu_decode = 0
   ct_pdu_decode_status_report = 0
+  ct_api_version = 0
+  CtApiVersion = #CT_API_VERSION_LEGACY
+EndProcedure
+
+; <summary>
+; CtApiVersion
+; </summary>
+; <returns>Returns the native C ABI feature version.</returns>
+Procedure.l CtGetApiVersion()
+  ProcedureReturn CtApiVersion
 EndProcedure
 
 ; <summary>
@@ -561,6 +586,10 @@ Procedure.l CtDecodeStatusReport(pduHex.s, *out.CtStatusReport)
 
   If *out = 0
     ProcedureReturn #CT_ERR_INVALID_ARGUMENT
+  EndIf
+
+  If CtApiVersion < #CT_API_VERSION_STATUS_REPORT Or ct_pdu_decode_status_report = 0
+    ProcedureReturn #CT_ERR_UNSUPPORTED
   EndIf
 
   *hex = CtUtf8Dup(pduHex)

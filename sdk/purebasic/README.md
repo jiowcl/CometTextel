@@ -95,6 +95,8 @@ No arguments on `pdu_example` runs a self-check:
 - `CtMessage` must stay packed like `struct ct_message` (`Align #PB_Structure_AlignC`).
 - `CtDecodeStatusReport` decodes SMS-STATUS-REPORT into `CtStatusReport`
   (`message_reference`, `tp_status`, recipient, service and discharge timestamps).
+- `CtGetApiVersion()` reports the native C ABI version; legacy DLLs are treated
+  as version 1 and return `#CT_ERR_UNSUPPORTED` for status-report decoding.
 - `ct_pdu_encode_submit` is single-segment; `ct_pdu_encode_submit_segments` auto-splits with concat UDH.
 - `#CT_DCS_GSM7` uses GSM 03.38 (UTF-8 in/out, ESC extension); alphabet outliers need `#CT_DCS_UCS2`.
 - `CtEncodeSubmit*` / `CtModemSend` omit TP-VP by default. Pass `relativeValidityPeriod` 0..255

@@ -822,6 +822,15 @@ void test_c_api_pdu_roundtrip()
 #endif
 }
 
+void test_c_api_version()
+{
+#if defined(COMETTEXTEL_HAS_C_API)
+    CHECK(ct_api_version() == CT_API_VERSION);
+#else
+    CHECK(true);
+#endif
+}
+
 void test_c_api_submit_options()
 {
 #if defined(COMETTEXTEL_HAS_C_API)
@@ -953,6 +962,7 @@ int main()
     test_reassemble_preserves_singles_and_order();
     test_parse_message_list_reassembles();
     test_c_api_pdu_roundtrip();
+    test_c_api_version();
     test_c_api_submit_options();
     test_c_api_status_report();
     test_c_api_concat_fields();

@@ -54,6 +54,8 @@ This requests a report; automatic modem delivery-event tracking is not yet provi
 The C++ core exposes status-report decoding. In .NET use
 `Pdu.DecodeStatusReport()` to obtain `MessageReference`, `TpStatus`,
 `RecipientAddress`, `ServiceTimestamp`, and `DischargeTime`.
+`Pdu.ApiVersion` reports the native C ABI feature version; a legacy DLL is
+reported as version 1 and produces a clear unsupported error for this method.
 
 ### Strings
 

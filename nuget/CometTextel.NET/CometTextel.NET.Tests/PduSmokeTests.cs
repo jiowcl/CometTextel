@@ -115,6 +115,12 @@ public sealed class PduSmokeTests
     }
 
     [Fact]
+    public void ApiVersion_IsCurrent()
+    {
+        Assert.True(Pdu.ApiVersion >= 2);
+    }
+
+    [Fact]
     public void DecodeStatusReport_Fixture()
     {
         const string pdu =

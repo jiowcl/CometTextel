@@ -34,6 +34,7 @@ namespace {
     if (!ec) {
         return CT_OK;
     }
+
     if (ec.category() != comettextel::error_category()) {
         return CT_ERR_UNKNOWN;
     }
@@ -181,6 +182,15 @@ void fill_status_report(ct_status_report* out, const comettextel::Message& repor
 } // namespace
 
 extern "C" {
+
+/**
+ * @brief Get the native C ABI feature version.
+ * @return The native C ABI feature version.
+ */
+int ct_api_version(void)
+{
+    return CT_API_VERSION;
+}
 
 /**
  * @brief Get the string representation of a C API status code.

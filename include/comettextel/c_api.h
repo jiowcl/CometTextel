@@ -46,6 +46,9 @@ enum ct_status {
     CT_ERR_UNKNOWN = 100
 };
 
+/** @brief Current C ABI feature version. */
+#define CT_API_VERSION 2
+
 /** @brief TP-DCS values. */
 enum ct_dcs {
     CT_DCS_GSM7 = 0, /**< GSM 03.38 7-bit default alphabet (+ ESC extension); text is UTF-8 */
@@ -88,6 +91,14 @@ typedef struct ct_status_report {
     char service_timestamp[32];
     char discharge_time[32];
 } ct_status_report;
+
+/**
+ * @brief Returns the C ABI feature version.
+ * @return The current @ref CT_API_VERSION.
+ *
+ * Libraries predating this function are treated as version 1 by SDKs.
+ */
+CT_API int ct_api_version(void);
 
 /**
  * @brief Returns a static English description for @p status.
