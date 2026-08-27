@@ -22,6 +22,7 @@ namespace CometTextel.NET.Core
         public GsmModem()
         {
             _handle = NativeMethods.ct_modem_create();
+
             if (_handle == IntPtr.Zero)
             {
                 throw new OutOfMemoryException("ct_modem_create failed");

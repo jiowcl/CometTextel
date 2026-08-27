@@ -191,7 +191,8 @@ def decode_status_report(pdu_hex: str) -> StatusReport:
 
     lib = _lib.load()
     decoder = getattr(lib, "ct_pdu_decode_status_report", None)
-    if decoder is None:
+
+    if not callable(decoder):
         raise CometTextelError(
             Status.UNSUPPORTED,
             "ct_pdu_decode_status_report",

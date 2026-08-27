@@ -308,7 +308,7 @@ def load(path: Optional[str | Path] = None) -> ctypes.CDLL:
     # Added in C ABI version 2. Keep it optional so an older DLL remains
     # usable for all APIs that it already provided.
     status_report = getattr(loaded, "ct_pdu_decode_status_report", None)
-    if status_report is not None:
+    if callable(status_report):
         status_report.argtypes = [c_char_p, POINTER(CtStatusReport)]
         status_report.restype = c_int
 
@@ -321,8 +321,9 @@ def api_version() -> int:
 
     loaded = load()
     version_fn = getattr(loaded, "ct_api_version", None)
-    if version_fn is None:
+    if not callable(version_fn):
         return 1
+
     version_fn.argtypes = []
     version_fn.restype = c_int
     return int(version_fn())

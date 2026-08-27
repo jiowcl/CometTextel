@@ -38,6 +38,7 @@ namespace CometTextel.NET.Core.Native
             try
             {
                 version = ct_api_version_native();
+
                 return true;
             }
             catch (EntryPointNotFoundException)
