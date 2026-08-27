@@ -76,6 +76,20 @@ typedef struct ct_message {
 } ct_message;
 
 /**
+ * @brief Decoded SMS-STATUS-REPORT fields.
+ *
+ * This separate type keeps the existing @ref ct_message ABI unchanged.
+ * Timestamp fields contain the library's serialized semi-octet form.
+ */
+typedef struct ct_status_report {
+    int32_t message_reference;
+    int32_t tp_status;
+    char recipient_address[32];
+    char service_timestamp[32];
+    char discharge_time[32];
+} ct_status_report;
+
+/**
  * @brief Returns a static English description for @p status.
  * @param status The status code.
  * @return The status string.
@@ -237,6 +251,16 @@ CT_API int ct_pdu_encode_submit_segments_ex(const char* smsc,
  * @return The status code.
  */
 CT_API int ct_pdu_decode(const char* pdu_hex, ct_message* out);
+
+/**
+ * @brief Decodes an SMS-STATUS-REPORT PDU into @p out.
+ * @param pdu_hex The SMS-STATUS-REPORT PDU hex string.
+ * @param out The destination status report struct.
+ * @return CT_OK when the PDU has MTI=10 and was decoded successfully;
+ *         CT_ERR_DECODE for another message type or malformed data.
+ */
+CT_API int ct_pdu_decode_status_report(const char* pdu_hex,
+                                       ct_status_report* out);
 
 #ifdef __cplusplus
 }

@@ -42,6 +42,17 @@ class Message:
         return self.is_concatenated and self.concat_seq == 0 and self.concat_total > 0
 
 
+@dataclass(frozen=True)
+class StatusReport:
+    """Decoded SMS-STATUS-REPORT fields."""
+
+    message_reference: int
+    tp_status: int
+    recipient_address: str
+    service_timestamp: str
+    discharge_time: str
+
+
 def _as_utf8(text: str) -> bytes:
     """Convert a Python string to a UTF-8 encoded bytes object."""
     
@@ -173,6 +184,22 @@ def decode(pdu_hex: str) -> Message:
     status = lib.ct_pdu_decode(_as_utf8(pdu_hex.strip()), ctypes.byref(out))
     _check(status, "ct_pdu_decode")
     return message_from_ct(out)
+
+
+def decode_status_report(pdu_hex: str) -> StatusReport:
+    """Decode an SMS-STATUS-REPORT PDU."""
+
+    lib = _lib.load()
+    out = _lib.CtStatusReport()
+    status = lib.ct_pdu_decode_status_report(_as_utf8(pdu_hex.strip()), ctypes.byref(out))
+    _check(status, "ct_pdu_decode_status_report")
+    return StatusReport(
+        message_reference=int(out.message_reference),
+        tp_status=int(out.tp_status),
+        recipient_address=_c_z(out.recipient_address),
+        service_timestamp=_c_z(out.service_timestamp),
+        discharge_time=_c_z(out.discharge_time),
+    )
 
 
 def load_library(path: Optional[str] = None) -> None:

@@ -17,6 +17,7 @@ from comettextel import (  # noqa: E402
     DCS_UCS2,
     CometTextelError,
     decode,
+    decode_status_report,
     encode_submit,
     encode_submit_segments,
 )
@@ -144,3 +145,13 @@ def test_gsm7_escape_forces_concat() -> None:
     assert len(parts) == 2
     joined = "".join(decode(p).user_data for p in parts)
     assert joined == text
+
+
+def test_status_report_decode() -> None:
+    pdu = "00022A0C91889621436587215070418045232150704180452300"
+    report = decode_status_report(pdu)
+    assert report.message_reference == 0x2A
+    assert report.tp_status == 0
+    assert report.recipient_address == "886912345678"
+    assert report.service_timestamp == "12050714085432"
+    assert report.discharge_time == "12050714085432"

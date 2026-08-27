@@ -49,6 +49,15 @@ Structure CtMessage Align #PB_Structure_AlignC
   concat_seq.l
 EndStructure
 
+; Status Report
+Structure CtStatusReport Align #PB_Structure_AlignC
+  message_reference.l
+  tp_status.l
+  recipient_address.a[32]
+  service_timestamp.a[32]
+  discharge_time.a[32]
+EndStructure
+
 PrototypeC.i Proto_ct_status_string(status.l)
 PrototypeC.i Proto_ct_modem_create()
 PrototypeC Proto_ct_modem_destroy(*modem)
@@ -62,6 +71,7 @@ PrototypeC.l Proto_ct_pdu_encode_submit_ex(*smsc, *destination, *text, dcs.l, re
 PrototypeC.l Proto_ct_pdu_encode_submit_segments(*smsc, *destination, *text, dcs.l, *out_hex, out_hex_cap.i, *out_count)
 PrototypeC.l Proto_ct_pdu_encode_submit_segments_ex(*smsc, *destination, *text, dcs.l, relativeValidityPeriod.l, requestStatusReport.l, *out_hex, out_hex_cap.i, *out_count)
 PrototypeC.l Proto_ct_pdu_decode(*pdu_hex, *out)
+PrototypeC.l Proto_ct_pdu_decode_status_report(*pdu_hex, *out)
 
 ; TODO: Using PureBasic's built-in functions.
 Import "kernel32.lib"
@@ -87,6 +97,7 @@ Global ct_pdu_encode_submit_ex.Proto_ct_pdu_encode_submit_ex
 Global ct_pdu_encode_submit_segments.Proto_ct_pdu_encode_submit_segments
 Global ct_pdu_encode_submit_segments_ex.Proto_ct_pdu_encode_submit_segments_ex
 Global ct_pdu_decode.Proto_ct_pdu_decode
+Global ct_pdu_decode_status_report.Proto_ct_pdu_decode_status_report
 
 ; <summary>
 ; CtJoinPath
@@ -250,6 +261,10 @@ Procedure.i CtInit(dllPath.s = "comettextel.dll")
   
   ct_pdu_decode = *fn
 
+  *fn = CtBindExport("ct_pdu_decode_status_report")
+  If *fn = 0 : FreeLibrary(CtLib) : CtLib = 0 : ProcedureReturn 0 : EndIf
+  ct_pdu_decode_status_report = *fn
+
   ProcedureReturn 1
 EndProcedure
 
@@ -276,6 +291,7 @@ Procedure CtShutdown()
   ct_pdu_encode_submit_segments = 0
   ct_pdu_encode_submit_segments_ex = 0
   ct_pdu_decode = 0
+  ct_pdu_decode_status_report = 0
 EndProcedure
 
 ; <summary>
@@ -526,6 +542,36 @@ Procedure.l CtDecode(pduHex.s, *out.CtMessage)
   result = ct_pdu_decode(*hex, *out)
   FreeMemory(*hex)
   
+  ProcedureReturn result
+EndProcedure
+
+; <summary>
+; CtDecodeStatusReport
+; </summary>
+; <param name="pduHex">string</param>
+; <param name="*out">status report structure</param>
+; <returns>Returns long.</returns>
+Procedure.l CtDecodeStatusReport(pduHex.s, *out.CtStatusReport)
+  Protected *hex
+  Protected result.l
+
+  If CtLib = 0
+    ProcedureReturn #CT_ERR_NOT_OPEN
+  EndIf
+
+  If *out = 0
+    ProcedureReturn #CT_ERR_INVALID_ARGUMENT
+  EndIf
+
+  *hex = CtUtf8Dup(pduHex)
+  
+  If *hex = 0
+    ProcedureReturn #CT_ERR_UNKNOWN
+  EndIf
+
+  FillMemory(*out, SizeOf(CtStatusReport))
+  result = ct_pdu_decode_status_report(*hex, *out)
+  FreeMemory(*hex)
   ProcedureReturn result
 EndProcedure
 

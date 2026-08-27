@@ -49,7 +49,11 @@ Submit APIs omit TP-VP and TP-SRR by default. Set `relativeValidityPeriod` to
 `0..255` to add a GSM relative TP-VP (`0` means five minutes), and set
 `requestStatusReport: true` to set TP-SRR. These options are available on
 `Pdu.EncodeSubmit`, `Pdu.EncodeSubmitSegments`, and `GsmModem.Send`.
-This requests a report; delivery-report parsing is not yet implemented.
+This requests a report; automatic modem delivery-event tracking is not yet provided.
+
+The C++ core exposes status-report decoding. In .NET use
+`Pdu.DecodeStatusReport()` to obtain `MessageReference`, `TpStatus`,
+`RecipientAddress`, `ServiceTimestamp`, and `DischargeTime`.
 
 ### Strings
 

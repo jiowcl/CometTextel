@@ -75,7 +75,7 @@ Examples: Windows `COM3`, Linux `/dev/ttyUSB0`. The modem must speak AT commands
 |------|-----------|
 | Status | `ct_status_string` |
 | Modem | `ct_modem_create`, `ct_modem_destroy`, `ct_modem_open`, `ct_modem_send`, `ct_modem_list`, `ct_modem_delete` |
-| PDU | `ct_pdu_encode_submit[_ex]`, `ct_pdu_encode_submit_segments[_ex]`, `ct_pdu_decode` |
+| PDU | `ct_pdu_encode_submit[_ex]`, `ct_pdu_encode_submit_segments[_ex]`, `ct_pdu_decode`, `ct_pdu_decode_status_report` |
 
 All text fields are **UTF-8**. See `include/comettextel/c_api.h` for details.
 
@@ -83,6 +83,9 @@ The default submit functions omit TP-VP and do not request a status report.
 Use the `_ex` variants to pass `relative_validity_period` (`-1` = omit,
 `0..255` = GSM relative TP-VP; `0` means five minutes) and
 `request_status_report` (`0` or `1` for TP-SRR).
+
+`ct_pdu_decode_status_report` decodes SMS-STATUS-REPORT independently of
+`ct_message`, returning TP-MR, TP-Status, TP-RA, TP-SCTS, and TP-DT.
 
 ### GSM 7-bit (`CT_DCS_GSM7`)
 

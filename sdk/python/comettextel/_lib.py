@@ -41,6 +41,18 @@ class CtMessage(ctypes.Structure):
     ]
 
 
+class CtStatusReport(ctypes.Structure):
+    """Structure representing a decoded SMS-STATUS-REPORT."""
+
+    _fields_ = [
+        ("message_reference", c_int32),
+        ("tp_status", c_int32),
+        ("recipient_address", c_char * 32),
+        ("service_timestamp", c_char * 32),
+        ("discharge_time", c_char * 32),
+    ]
+
+
 _lib: Optional[ctypes.CDLL] = None
 
 
@@ -292,6 +304,9 @@ def load(path: Optional[str | Path] = None) -> ctypes.CDLL:
 
     loaded.ct_pdu_decode.argtypes = [c_char_p, POINTER(CtMessage)]
     loaded.ct_pdu_decode.restype = c_int
+
+    loaded.ct_pdu_decode_status_report.argtypes = [c_char_p, POINTER(CtStatusReport)]
+    loaded.ct_pdu_decode_status_report.restype = c_int
 
     _lib = loaded
     return _lib

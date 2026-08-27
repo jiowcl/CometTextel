@@ -124,10 +124,19 @@ Unsupported glyphs (e.g. Chinese) raise `CometTextelError` / encode status — u
 Extension characters consume two septets; concat auto-split will not break an ESC pair.
 
 ```python
-from comettextel import DCS_GSM7, decode, encode_submit
+from comettextel import DCS_GSM7, decode, decode_status_report, encode_submit
 
 hex_pdu = encode_submit("886912345678", "Cost: 10€ [ok]", "886932000000", DCS_GSM7)
 print(decode(hex_pdu).user_data)
+```
+
+Status reports can be decoded separately:
+
+```python
+report = decode_status_report(
+    "00022A0C91889621436587215070418045232150704180452300"
+)
+print(report.message_reference, hex(report.tp_status), report.recipient_address)
 ```
 
 ### Validity Period / Status Report

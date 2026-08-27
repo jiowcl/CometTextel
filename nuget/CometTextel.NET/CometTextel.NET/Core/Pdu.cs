@@ -133,6 +133,21 @@ namespace CometTextel.NET.Core
         }
 
         /// <summary>
+        /// Decode an SMS-STATUS-REPORT PDU.
+        /// </summary>
+        /// <param name="pduHex">The status report PDU hex string.</param>
+        /// <returns>The decoded status report.</returns>
+        public static StatusReport DecodeStatusReport(
+            string pduHex)
+        {
+            ArgumentException.ThrowIfNullOrEmpty(pduHex);
+            int status = NativeMethods.ct_pdu_decode_status_report(pduHex, out var native);
+            EnsureOk(status);
+            
+            return StatusReport.FromNative(native);
+        }
+
+        /// <summary>
         /// Throws <see cref="CometTextelException"/> unless <paramref name="status"/> is OK.
         /// </summary>
         /// <param name="status">The status code.</param>

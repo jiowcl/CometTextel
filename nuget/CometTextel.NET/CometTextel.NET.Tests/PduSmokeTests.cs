@@ -115,6 +115,21 @@ public sealed class PduSmokeTests
     }
 
     [Fact]
+    public void DecodeStatusReport_Fixture()
+    {
+        const string pdu =
+            "00022A0C91889621436587215070418045232150704180452300";
+
+        StatusReport report = Pdu.DecodeStatusReport(pdu);
+
+        Assert.Equal(0x2A, report.MessageReference);
+        Assert.Equal(0, report.TpStatus);
+        Assert.Equal("886912345678", report.RecipientAddress);
+        Assert.Equal("12050714085432", report.ServiceTimestamp);
+        Assert.Equal("12050714085432", report.DischargeTime);
+    }
+
+    [Fact]
     public void Decode_EmptyHex_Throws()
     {
         Assert.ThrowsAny<ArgumentException>(() => Pdu.Decode(""));

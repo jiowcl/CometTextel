@@ -838,6 +838,23 @@ void test_c_api_submit_options()
 #endif
 }
 
+void test_c_api_status_report()
+{
+#if defined(COMETTEXTEL_HAS_C_API)
+    constexpr char kDelivered[] =
+        "00022A0C91889621436587215070418045232150704180452300";
+    ct_status_report report{};
+    CHECK(ct_pdu_decode_status_report(kDelivered, &report) == CT_OK);
+    CHECK(report.message_reference == 0x2A);
+    CHECK(report.tp_status == 0x00);
+    CHECK(std::string_view{report.recipient_address} == "886912345678");
+    CHECK(std::string_view{report.service_timestamp} == "12050714085432");
+    CHECK(std::string_view{report.discharge_time} == "12050714085432");
+#else
+    CHECK(true);
+#endif
+}
+
 void test_c_api_concat_fields()
 {
 #if defined(COMETTEXTEL_HAS_C_API)
@@ -937,6 +954,7 @@ int main()
     test_parse_message_list_reassembles();
     test_c_api_pdu_roundtrip();
     test_c_api_submit_options();
+    test_c_api_status_report();
     test_c_api_concat_fields();
     test_c_api_encode_segments();
 

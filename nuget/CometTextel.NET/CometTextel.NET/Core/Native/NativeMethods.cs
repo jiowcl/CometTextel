@@ -81,6 +81,37 @@ namespace CometTextel.NET.Core.Native
         }
 
         /// <summary>
+        /// Blittable mirror of <c>ct_status_report</c>.
+        /// </summary>
+        [StructLayout(LayoutKind.Sequential)]
+        public struct CtStatusReport
+        {
+            // Message reference.
+            public int MessageReference;
+
+            // TP status.
+            public int TpStatus;
+
+            /// <summary>
+            /// Recipient address.
+            /// </summary>
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 32)]
+            public byte[] RecipientAddress;
+
+            /// <summary>
+            /// Service timestamp.
+            /// </summary>
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 32)]
+            public byte[] ServiceTimestamp;
+
+            /// <summary>
+            /// Discharge time.
+            /// </summary>
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 32)]
+            public byte[] DischargeTime;
+        }
+
+        /// <summary>
         /// Gets the status string for a given status code.
         /// </summary>
         /// <param name="status">The status code.</param>
@@ -281,6 +312,17 @@ namespace CometTextel.NET.Core.Native
         public static extern int ct_pdu_decode(
             [MarshalAs(UnmanagedType.LPUTF8Str)] string pduHex,
             out CtMessage outMessage);
+
+        /// <summary>
+        /// Decodes an SMS-STATUS-REPORT PDU.
+        /// </summary>
+        /// <param name="pduHex">The PDU hex string to decode.</param>
+        /// <param name="outReport">The decoded status report.</param>
+        /// <returns>The error code.</returns>
+        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int ct_pdu_decode_status_report(
+            [MarshalAs(UnmanagedType.LPUTF8Str)] string pduHex,
+            out CtStatusReport outReport);
 
         /// <summary>
         /// Decodes a NUL-terminated UTF-8 byte field from native memory.

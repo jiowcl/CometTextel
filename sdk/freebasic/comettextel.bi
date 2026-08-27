@@ -57,6 +57,15 @@ Type CtMessage
 	concat_seq As Long
 End Type
 
+' Status Report
+Type CtStatusReport
+	message_reference As Long
+	tp_status As Long
+	recipient_address(0 To 31) As UByte
+	service_timestamp(0 To 31) As UByte
+	discharge_time(0 To 31) As UByte
+End Type
+
 Type CtStatusStringFn As Function CDecl (ByVal status As Long) As ZString Ptr
 Type CtModemCreateFn As Function CDecl () As Any Ptr
 Type CtModemDestroyFn As Sub CDecl (ByVal modem As Any Ptr)
@@ -137,6 +146,10 @@ Type CtPduDecodeFn As Function CDecl ( _
 	ByVal pdu_hex As ZString Ptr, _
 	ByVal msg As CtMessage Ptr _
 	) As Long
+Type CtPduDecodeStatusReportFn As Function CDecl ( _
+	ByVal pdu_hex As ZString Ptr, _
+	ByVal report As CtStatusReport Ptr _
+	) As Long
 
 Dim Shared CtLib As Any Ptr = 0
 Dim Shared CtLoadError As String
@@ -154,6 +167,7 @@ Dim Shared ct_pdu_encode_submit_ex As CtPduEncodeSubmitExFn = 0
 Dim Shared ct_pdu_encode_submit_segments As CtPduEncodeSubmitSegmentsFn = 0
 Dim Shared ct_pdu_encode_submit_segments_ex As CtPduEncodeSubmitSegmentsExFn = 0
 Dim Shared ct_pdu_decode As CtPduDecodeFn = 0
+Dim Shared ct_pdu_decode_status_report As CtPduDecodeStatusReportFn = 0
 
 ' <summary>
 ' CtJoinPath
@@ -354,6 +368,9 @@ Function CtInit(ByRef dllPath As String = "comettextel.dll") As Long
 		Return 0
 	End If
 
+	ct_pdu_decode_status_report = Cast(CtPduDecodeStatusReportFn, CtBindExport("ct_pdu_decode_status_report"))
+	If ct_pdu_decode_status_report = 0 Then DyLibFree(CtLib) : CtLib = 0 : Return 0
+
 	Return 1
 End Function
 
@@ -380,6 +397,7 @@ Sub CtShutdown()
 	ct_pdu_encode_submit_segments = 0
 	ct_pdu_encode_submit_segments_ex = 0
 	ct_pdu_decode = 0
+	ct_pdu_decode_status_report = 0
 End Sub
 
 ' <summary>
@@ -510,6 +528,21 @@ Function CtDecode(ByRef pduHex As String, ByVal msg As CtMessage Ptr) As Long
 	Clear *msg, 0, SizeOf(CtMessage)
 
 	Return ct_pdu_decode(StrPtr(pdu), msg)
+End Function
+
+' <summary>
+' CtDecodeStatusReport
+' </summary>
+' <param name="pduHex">String</param>
+' <param name="report">CtStatusReport Ptr</param>
+' <returns>Returns Long.</returns>
+Function CtDecodeStatusReport(ByRef pduHex As String, ByVal report As CtStatusReport Ptr) As Long
+	If CtLib = 0 Then Return CT_ERR_NOT_OPEN
+	If report = 0 Then Return CT_ERR_INVALID_ARGUMENT
+
+	Dim As String pdu = pduHex
+	Clear *report, 0, SizeOf(CtStatusReport)
+	Return ct_pdu_decode_status_report(StrPtr(pdu), report)
 End Function
 
 ' <summary>

@@ -153,6 +153,31 @@ void fill_message(ct_message* out, const comettextel::Message& msg)
     copy_field(out->user_data, sizeof(out->user_data), msg.user_data);
 }
 
+/**
+ * @brief Fill a C API status report struct with a CometTextel message.
+ * @param out The destination status report struct.
+ * @param report The CometTextel message.
+ */
+void fill_status_report(ct_status_report* out, const comettextel::Message& report)
+{
+    if (out == nullptr) {
+        return;
+    }
+
+    std::memset(out, 0, sizeof(*out));
+    out->message_reference = static_cast<int32_t>(report.message_reference);
+    out->tp_status = static_cast<int32_t>(report.tp_status);
+    copy_field(out->recipient_address,
+               sizeof(out->recipient_address),
+               report.peer_address);
+    copy_field(out->service_timestamp,
+               sizeof(out->service_timestamp),
+               report.service_timestamp);
+    copy_field(out->discharge_time,
+               sizeof(out->discharge_time),
+               report.discharge_time);
+}
+
 } // namespace
 
 extern "C" {
@@ -539,6 +564,33 @@ int ct_pdu_decode(const char* pdu_hex, ct_message* out)
 
     fill_message(out, message);
     
+    return CT_OK;
+}
+
+/**
+ * @brief Decode an SMS-STATUS-REPORT PDU.
+ * @param pdu_hex The SMS-STATUS-REPORT PDU hex string.
+ * @param out The destination status report struct.
+ * @return The C API status code.
+ */
+int ct_pdu_decode_status_report(const char* pdu_hex, ct_status_report* out)
+{
+    if (pdu_hex == nullptr || out == nullptr) {
+        return CT_ERR_INVALID_ARGUMENT;
+    }
+
+    comettextel::Message report;
+
+    if (const auto ec = comettextel::PduCodec::decode(pdu_hex, report); ec) {
+        return map_error(ec);
+    }
+
+    if (!report.is_status_report) {
+        return CT_ERR_DECODE;
+    }
+
+    fill_status_report(out, report);
+
     return CT_OK;
 }
 
