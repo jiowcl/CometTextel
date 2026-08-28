@@ -107,7 +107,7 @@ When using the static library, define `COMETTEXTEL_STATIC` before including `c_a
 ## See also
 
 - Full C++ package / `find_package`: repository [README](https://github.com/jiowcl/CometTextel) and `doc/getting-started.md`
-- .NET: (`nuget/CometTextel.NET`): [`nuget/CometTextel.NET/CometTextel.NET/README.md`](https://github.com/jiowcl/CometTextel/blob/main/nuget/CometTextel.NET/README.md)
+- .NET: (`nuget/CometTextel.NET`): [`nuget/CometTextel.NET/README.md`](https://github.com/jiowcl/CometTextel/blob/main/nuget/CometTextel.NET/README.md)
 - Python (`ctypes`, PDU + modem): [`sdk/python/README.md`](https://github.com/jiowcl/CometTextel/blob/main/sdk/python/README.md)
 - PureBasic (`LoadLibrary` / `GetProcAddress`, PDU only): [`sdk/purebasic/README.md`](https://github.com/jiowcl/CometTextel/blob/main/sdk/purebasic/README.md)
 - FreeBASIC (`DyLibLoad`, PDU only): [`sdk/freebasic/README.md`](https://github.com/jiowcl/CometTextel/blob/main/sdk/freebasic/README.md)
