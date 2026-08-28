@@ -163,8 +163,8 @@ delivery-event tracking are not yet provided.
 
 ## See also
 
-- [`include/comettextel/c_api.h`](https://github.com/jiowcl/CometTextel/include/comettextel/c_api.h)
-- [`sdk/c/README.md`](https://github.com/jiowcl/CometTextel/sdk/c/README.md)
-- [`sdk/freebasic/README.md`](https://github.com/jiowcl/CometTextel/sdk/freebasic/README.md)
-- [`sdk/purebasic/README.md`](https://github.com/jiowcl/CometTextel/sdk/purebasic/README.md)
-- [`examples/c_api_example.c`](https://github.com/jiowcl/CometTextel/examples/c_api_example.c)
+- [`include/comettextel/c_api.h`](https://github.com/jiowcl/CometTextel/blob/main/include/comettextel/c_api.h)
+- [`sdk/c/README.md`](https://github.com/jiowcl/CometTextel/blob/main/sdk/c/README.md)
+- [`sdk/freebasic/README.md`](https://github.com/jiowcl/CometTextel/blob/main/sdk/freebasic/README.md)
+- [`sdk/purebasic/README.md`](https://github.com/jiowcl/CometTextel/blob/main/sdk/purebasic/README.md)
+- [`examples/c_api_example.c`](https://github.com/jiowcl/CometTextel/blob/main/examples/c_api_example.c)
