@@ -249,7 +249,7 @@ Code released under the MIT license.
 
 ## TODO  
 
-- Longer modem async I/O / thread-safe serial   
+- Longer modem async I/O / thread-safe serial  
 
 ## Donation  
 

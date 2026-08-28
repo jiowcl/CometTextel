@@ -214,11 +214,12 @@ Prefer the dedicated **C SDK** artifact (or Release `*-c-sdk-*` archive). It shi
 - `examples/c_api_example.c`  
 - package `README.md` with compile/link commands  
 
-See [`sdk/c/README.md`](../sdk/c/README.md). For a full C++ tree, use the non-`c-sdk` package above.
+See [`sdk/c/README.md`](https://github.com/jiowcl/CometTextel/sdk/c/README.md). For a full C++ tree, use the non-`c-sdk` package above.
 
 ## See also  
 
-- [README.md](../README.md) — build options, CI, releases  
+- [README.md](https://github.com/jiowcl/CometTextel/README.md) — build options, CI, releases  
 - `examples/` — send / list / receive / delete samples (+ C ABI example)  
-- [`sdk/c/README.md`](../sdk/c/README.md) — C SDK layout and quick start  
-- [`sdk/purebasic/README.md`](../sdk/purebasic/README.md) — PureBasic OpenLibrary PDU sample (Windows x64, not in CI)  
+- [`sdk/c/README.md`](https://github.com/jiowcl/CometTextel/sdk/c/README.md) — C SDK layout and quick start  
+- [`sdk/purebasic/README.md`](https://github.com/jiowcl/CometTextel/sdk/purebasic/README.md) — PureBasic OpenLibrary PDU sample (Windows x64, not in CI)  
+- [`sdk/freebasic/README.md`](https://github.com/jiowcl/CometTextel/sdk/freebasic/README.md) — FreeBasic DyLibLoad PDU sample (Windows x64, not in CI)  

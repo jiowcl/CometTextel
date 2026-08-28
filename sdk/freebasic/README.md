@@ -99,8 +99,8 @@ Do not reimplement PDU codecs in FreeBASIC. If the C ABI changes, update `comett
 
 ## See also
 
-- [`include/comettextel/c_api.h`](../../include/comettextel/c_api.h)
-- [`sdk/c/README.md`](../c/README.md)
-- [`sdk/purebasic/README.md`](../purebasic/README.md)
-- [`sdk/python/README.md`](../python/README.md)
-- [`examples/c_api_example.c`](../../examples/c_api_example.c)
+- [`include/comettextel/c_api.h`](https://github.com/jiowcl/CometTextel/include/comettextel/c_api.h)
+- [`sdk/c/README.md`](https://github.com/jiowcl/CometTextel/sdk/c/README.md)
+- [`sdk/purebasic/README.md`](https://github.com/jiowcl/CometTextel/sdk/purebasic/README.md)
+- [`sdk/python/README.md`](https://github.com/jiowcl/CometTextel/sdk/python/README.md)
+- [`examples/c_api_example.c`](https://github.com/jiowcl/CometTextel/examples/c_api_example.c)
