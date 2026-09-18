@@ -262,6 +262,11 @@ def load(path: Optional[str | Path] = None) -> ctypes.CDLL:
         poll_status.argtypes = [c_void_p, POINTER(CtStatusReport), c_int]
         poll_status.restype = c_int
 
+    run_at = getattr(loaded, "ct_modem_run_at_command", None)
+    if callable(run_at):
+        run_at.argtypes = [c_void_p, c_char_p, c_void_p, c_int, c_int]
+        run_at.restype = c_int
+
     loaded.ct_pdu_encode_submit.argtypes = [
         c_char_p,
         c_char_p,

@@ -14,6 +14,7 @@ target_compile_features(comettextel_modem_tests PRIVATE cxx_std_23)
 
 if(COMETTEXTEL_BUILD_C_API)
     target_compile_definitions(comettextel_pdu_tests PRIVATE COMETTEXTEL_HAS_C_API=1)
+    target_compile_definitions(comettextel_modem_tests PRIVATE COMETTEXTEL_BUILD_C_API=1)
 endif()
 
 add_test(NAME comettextel.pdu_roundtrip COMMAND comettextel_pdu_tests)

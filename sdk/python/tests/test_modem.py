@@ -12,7 +12,7 @@ _SDK_ROOT = Path(__file__).resolve().parents[1]
 if str(_SDK_ROOT) not in sys.path:
     sys.path.insert(0, str(_SDK_ROOT))
 
-from comettextel import CometTextelError, GsmModem, Message  # noqa: E402
+from comettextel import CometTextelError, GsmModem, Message, Status  # noqa: E402
 from comettextel import _lib  # noqa: E402
 
 
@@ -48,6 +48,19 @@ def test_modem_rejects_empty_port() -> None:
     with GsmModem() as modem:
         with pytest.raises(ValueError):
             modem.open("", 115200)
+
+
+def test_modem_run_at_command_requires_native_export(monkeypatch: pytest.MonkeyPatch) -> None:
+    with GsmModem() as modem:
+        loaded = _lib.load()
+        if not callable(getattr(loaded, "ct_modem_run_at_command", None)):
+            with pytest.raises(CometTextelError) as exc:
+                modem.run_at_command("AT+CSQ\r")
+            assert exc.value.status == Status.UNSUPPORTED
+            return
+
+        with pytest.raises(CometTextelError):
+            modem.run_at_command("AT+CSQ\r")
 
 
 def test_message_reassembled_property() -> None:

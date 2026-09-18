@@ -113,6 +113,13 @@ Type CtModemPollStatusReportFn As Function CDecl ( _
 	ByVal report As CtStatusReport Ptr, _
 	ByVal timeoutMs As Long _
 	) As Long
+Type CtModemRunAtCommandFn As Function CDecl ( _
+	ByVal modem As Any Ptr, _
+	ByVal command As ZString Ptr, _
+	ByVal outResponse As Any Ptr, _
+	ByVal outResponseCap As Long, _
+	ByVal timeoutMs As Long _
+	) As Long
 Type CtPduEncodeSubmitFn As Function CDecl ( _
 	ByVal smsc As ZString Ptr, _
 	ByVal destination As ZString Ptr, _
@@ -174,6 +181,7 @@ Dim Shared ct_modem_send_ex As CtModemSendExFn = 0
 Dim Shared ct_modem_list As CtModemListFn = 0
 Dim Shared ct_modem_delete As CtModemDeleteFn = 0
 Dim Shared ct_modem_poll_status_report As CtModemPollStatusReportFn = 0
+Dim Shared ct_modem_run_at_command As CtModemRunAtCommandFn = 0
 Dim Shared ct_pdu_encode_submit As CtPduEncodeSubmitFn = 0
 Dim Shared ct_pdu_encode_submit_ex As CtPduEncodeSubmitExFn = 0
 Dim Shared ct_pdu_encode_submit_segments As CtPduEncodeSubmitSegmentsFn = 0
@@ -364,6 +372,7 @@ Function CtInit(ByRef dllPath As String = "comettextel.dll") As Long
 
 	' Added in C ABI version 3. Keep this export optional for legacy DLLs.
 	ct_modem_poll_status_report = Cast(CtModemPollStatusReportFn, DyLibSymbol(CtLib, "ct_modem_poll_status_report"))
+	ct_modem_run_at_command = Cast(CtModemRunAtCommandFn, DyLibSymbol(CtLib, "ct_modem_run_at_command"))
 
 	ct_pdu_encode_submit = Cast(CtPduEncodeSubmitFn, CtBindExport("ct_pdu_encode_submit"))
 
@@ -417,6 +426,7 @@ Sub CtShutdown()
 	ct_modem_list = 0
 	ct_modem_delete = 0
 	ct_modem_poll_status_report = 0
+	ct_modem_run_at_command = 0
 	ct_pdu_encode_submit = 0
 	ct_pdu_encode_submit_ex = 0
 	ct_pdu_encode_submit_segments = 0
@@ -753,6 +763,32 @@ Function CtModemPollStatusReport( _
 
 	Clear *report, 0, SizeOf(CtStatusReport)
 	Return ct_modem_poll_status_report(modem, report, timeoutMs)
+End Function
+
+' <summary>
+' CtModemRunAtCommand
+' </summary>
+' <param name="modem">Any Ptr</param>
+' <param name="command">ZString Ptr</param>
+' <param name="outResponse">Any Ptr</param>
+' <param name="outResponseCap">Long</param>
+' <param name="timeoutMs">Long</param>
+' <returns>Returns Long.</returns>
+Function CtModemRunAtCommand( _
+	ByVal modem As Any Ptr, _
+	ByVal command As ZString Ptr, _
+	ByVal outResponse As Any Ptr, _
+	ByVal outResponseCap As Long, _
+	ByVal timeoutMs As Long = 3000 _
+	) As Long
+
+	If CtLib = 0 OrElse modem = 0 Then Return CT_ERR_NOT_OPEN
+	If command = 0 OrElse outResponse = 0 OrElse outResponseCap <= 0 Then Return CT_ERR_INVALID_ARGUMENT
+	If CtApiVersion < CT_API_VERSION_MODEM_STATUS_REPORT OrElse ct_modem_run_at_command = 0 Then
+		Return CT_ERR_UNSUPPORTED
+	End If
+
+	Return ct_modem_run_at_command(modem, command, outResponse, outResponseCap, timeoutMs)
 End Function
 
 #endif /' COMETTEXTEL_BI '/

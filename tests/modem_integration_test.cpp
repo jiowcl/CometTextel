@@ -15,6 +15,10 @@
 #include "comettextel/modem.hpp"
 #include "comettextel/types.hpp"
 
+#ifdef COMETTEXTEL_BUILD_C_API
+#include "comettextel/c_api.h"
+#endif
+
 namespace {
 
 int g_failures = 0;
@@ -166,6 +170,51 @@ void test_cds_interleaved_with_prompt_still_sends()
     CHECK(report.message_reference == 0x2A);
 }
 
+void test_run_at_command_csq()
+{
+    comettextel::SerialPort port;
+    CHECK(!port.open_memory([](std::string_view cmd) -> std::string {
+        if (cmd.rfind("AT+CSQ", 0) == 0) {
+            return std::string("\r\n+CSQ: 18,99\r\n") + ok_response();
+        }
+        if (cmd.rfind("AT+CPIN?", 0) == 0) {
+            return std::string("\r\n+CPIN: READY\r\n") + ok_response();
+        }
+        return ok_response();
+    }));
+
+    comettextel::GsmModem modem(port);
+    comettextel::ResponseBuffer response;
+    CHECK(!modem.run_at_command("AT+CSQ", response, std::chrono::seconds(3)));
+    CHECK(response.data.find("+CSQ: 18,99") != std::string::npos);
+    CHECK(response.data.find("OK") != std::string::npos);
+}
+
+#ifdef COMETTEXTEL_BUILD_C_API
+void test_c_api_run_at_command_not_open()
+{
+    ct_modem* modem = ct_modem_create();
+    char buffer[256]{};
+    CHECK(ct_modem_run_at_command(modem, "AT+CSQ\r", buffer, sizeof(buffer), 1000) ==
+          CT_ERR_NOT_OPEN);
+    ct_modem_destroy(modem);
+}
+
+void test_c_api_run_at_command_invalid_args()
+{
+    ct_modem* modem = ct_modem_create();
+    char buffer[256]{};
+    CHECK(ct_modem_run_at_command(nullptr, "AT\r", buffer, sizeof(buffer), 1000) ==
+          CT_ERR_INVALID_ARGUMENT);
+    CHECK(ct_modem_run_at_command(modem, nullptr, buffer, sizeof(buffer), 1000) ==
+          CT_ERR_INVALID_ARGUMENT);
+    CHECK(ct_modem_run_at_command(modem, "AT\r", nullptr, sizeof(buffer), 1000) ==
+          CT_ERR_INVALID_ARGUMENT);
+    CHECK(ct_modem_run_at_command(modem, "AT\r", buffer, 0, 1000) == CT_ERR_INVALID_ARGUMENT);
+    ct_modem_destroy(modem);
+}
+#endif
+
 void test_push_rx_urc_without_command()
 {
     comettextel::SerialPort port;
@@ -195,6 +244,11 @@ int main()
     test_poll_status_report_timeout_when_empty();
     test_cds_interleaved_with_ok_is_queued();
     test_cds_interleaved_with_prompt_still_sends();
+    test_run_at_command_csq();
+#ifdef COMETTEXTEL_BUILD_C_API
+    test_c_api_run_at_command_not_open();
+    test_c_api_run_at_command_invalid_args();
+#endif
     test_push_rx_urc_without_command();
 
     if (g_failures != 0) {

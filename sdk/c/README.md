@@ -74,7 +74,7 @@ Examples: Windows `COM3`, Linux `/dev/ttyUSB0`. The modem must speak AT commands
 | Area | Functions |
 |------|-----------|
 | Status | `ct_status_string` |
-| Modem | `ct_modem_create`, `ct_modem_destroy`, `ct_modem_open`, `ct_modem_send[_ex]`, `ct_modem_list`, `ct_modem_delete`, `ct_modem_poll_status_report` |
+| Modem | `ct_modem_create`, `ct_modem_destroy`, `ct_modem_open`, `ct_modem_send[_ex]`, `ct_modem_list`, `ct_modem_delete`, `ct_modem_poll_status_report`, `ct_modem_run_at_command` |
 | PDU | `ct_pdu_encode_submit[_ex]`, `ct_pdu_encode_submit_segments[_ex]`, `ct_pdu_decode`, `ct_pdu_decode_status_report` |
 
 All text fields are **UTF-8**. See `include/comettextel/c_api.h` for details.
@@ -89,6 +89,9 @@ Use the `_ex` variants to pass `relative_validity_period` (`-1` = omit,
 
 `ct_modem_poll_status_report` (C ABI v3) drains unsolicited `+CDS` URCs and
 returns one queued report (`timeout_ms=0` is non-blocking).
+
+`ct_modem_run_at_command` (C ABI v3) sends one AT command, waits for OK/ERROR,
+and writes accumulated modem text into a caller buffer (URCs are demultiplexed).
 
 ### GSM 7-bit (`CT_DCS_GSM7`)
 

@@ -7,6 +7,8 @@
 - Best-effort `AT+CNMI` during modem initialize to route delivery reports.
 - Add `GsmModem::poll_status_report` and C ABI `ct_modem_poll_status_report`
   (feature version 3); synchronize Python, .NET, PureBasic, and FreeBASIC.
+- Add `GsmModem::run_at_command` and C ABI `ct_modem_run_at_command`
+  (feature version 3) for generic AT queries with URC demux during the wait.
 - Internal recursive mutex serializes overlapping modem calls.
 - Add in-memory `SerialPort` scripted backend for modem integration tests.
 

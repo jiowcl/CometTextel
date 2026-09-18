@@ -1,6 +1,7 @@
 // CometTextel.NET - CometTextel API for .NET
 // Copyright (c) 2026 Jiowcl. All rights reserved.
 
+using System.Text;
 using CometTextel.NET.Core.Native;
 
 namespace CometTextel.NET.Core
@@ -126,6 +127,63 @@ namespace CometTextel.NET.Core
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
             Pdu.EnsureOk(NativeMethods.ct_modem_delete(_handle, index, timeoutMs));
+        }
+
+        /// <summary>
+        /// Sends one AT command and returns accumulated modem text on success.
+        /// </summary>
+        /// <param name="command">Command bytes; a trailing CR is appended when missing.</param>
+        /// <param name="timeoutMs">Maximum wait for OK/ERROR.</param>
+        /// <param name="responseCap">Response buffer capacity in bytes.</param>
+        /// <returns>Accumulated modem text including the final result.</returns>
+        public string RunAtCommand(
+            string command,
+            int timeoutMs = 3000,
+            int responseCap = 4096)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+
+            if (string.IsNullOrEmpty(command))
+            {
+                throw new ArgumentException("command must be non-empty", nameof(command));
+            }
+
+            if (responseCap <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(responseCap));
+            }
+
+            bool hasVersionExport = NativeMethods.TryGetApiVersion(out int apiVersion);
+
+            if (!hasVersionExport || apiVersion < NativeMethods.ModemStatusReportApiVersion)
+            {
+                throw new CometTextelException(
+                    Enums.ErrUnsupported,
+                    $"native C ABI version {apiVersion} does not provide generic AT command execution");
+            }
+
+            byte[] buffer = new byte[responseCap];
+            int status;
+
+            try
+            {
+                status = NativeMethods.ct_modem_run_at_command(
+                    _handle,
+                    command,
+                    buffer,
+                    responseCap,
+                    timeoutMs);
+            }
+            catch (EntryPointNotFoundException)
+            {
+                throw new CometTextelException(
+                    Enums.ErrUnsupported,
+                    "native C ABI does not export ct_modem_run_at_command");
+            }
+
+            string response = Encoding.UTF8.GetString(buffer).TrimEnd('\0');
+            Pdu.EnsureOk(status);
+            return response;
         }
 
         /// <summary>

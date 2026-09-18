@@ -78,6 +78,20 @@ public:
         std::chrono::milliseconds timeout = std::chrono::seconds(10));
 
     /**
+     * @brief Sends one AT command and waits for a final OK or ERROR.
+     * @param command Command bytes; a trailing @c \\r is appended when missing.
+     * @param response Accumulated modem text including the final result.
+     * @param timeout Maximum wait for OK/ERROR.
+     * @return Empty on OK; @ref Errc::ModemRejected on ERROR; @ref Errc::Timeout otherwise.
+     *
+     * URCs are demultiplexed during the wait (same as @ref poll_response).
+     */
+    [[nodiscard]] std::error_code run_at_command(
+        std::string_view command,
+        ResponseBuffer& response,
+        std::chrono::milliseconds timeout = std::chrono::seconds(3));
+
+    /**
      * @brief Requests the full message list (@c AT+CMGL).
      * @return Empty error_code on success.
      * @note Prefer @ref wait_for_response / @ref wait_until_ok, then @ref parse_message_list.

@@ -266,6 +266,23 @@ namespace CometTextel.NET.Core.Native
             int timeoutMs);
 
         /// <summary>
+        /// Sends one AT command and waits for a final OK or ERROR.
+        /// </summary>
+        /// <param name="modem">The modem handle.</param>
+        /// <param name="command">Command bytes; a trailing CR is appended when missing.</param>
+        /// <param name="outResponse">Buffer receiving accumulated modem text.</param>
+        /// <param name="outResponseCap">Capacity of <paramref name="outResponse"/> in bytes.</param>
+        /// <param name="timeoutMs">Maximum wait for OK/ERROR.</param>
+        /// <returns>The error code.</returns>
+        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int ct_modem_run_at_command(
+            IntPtr modem,
+            [MarshalAs(UnmanagedType.LPUTF8Str)] string command,
+            byte[] outResponse,
+            int outResponseCap,
+            int timeoutMs);
+
+        /// <summary>
         /// Encodes a PDU hex string into a <c>ct_message</c>.
         /// </summary>
         /// <param name="smsc">The SMSC address.</param>

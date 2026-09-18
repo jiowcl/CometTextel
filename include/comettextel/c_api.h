@@ -201,6 +201,23 @@ CT_API int ct_modem_poll_status_report(ct_modem* modem,
                                        int timeout_ms);
 
 /**
+ * @brief Sends one AT command and waits for a final OK or ERROR.
+ * @param modem The modem object.
+ * @param command Command bytes; a trailing @c \\r is appended when missing.
+ * @param out_response Receives accumulated modem text (NUL-terminated).
+ * @param out_response_cap Capacity of @p out_response in bytes (including NUL).
+ * @param timeout_ms Maximum wait for OK/ERROR.
+ * @return CT_OK on success; partial text may still be written on error.
+ *
+ * @note Requires C ABI version 3. URCs are demultiplexed during the wait.
+ */
+CT_API int ct_modem_run_at_command(ct_modem* modem,
+                                   const char* command,
+                                   char* out_response,
+                                   int out_response_cap,
+                                   int timeout_ms);
+
+/**
  * @brief Encodes a submit PDU hex string (no modem I/O).
  * @param smsc The service center address.
  * @param destination The destination address.

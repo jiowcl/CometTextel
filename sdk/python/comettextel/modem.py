@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import ctypes
 from types import TracebackType
+
 from typing import Optional, Type
 
 from . import _lib
@@ -131,6 +132,40 @@ class GsmModem:
         lib = self._ensure_open()
         status = lib.ct_modem_delete(self._handle, int(index), int(timeout_ms))
         _check(status, "ct_modem_delete")
+
+    def run_at_command(self, command: str, timeout_ms: int = 3000, *, response_cap: int = 4096) -> str:
+        """Send one AT command and return accumulated modem text on OK.
+
+        Raises ``CometTextelError`` with ``Status.UNSUPPORTED`` when the native
+        library is older than C ABI v3.
+        """
+
+        if not command:
+            raise ValueError("command must be non-empty")
+        if response_cap <= 0:
+            raise ValueError("response_cap must be positive")
+
+        lib = self._ensure_open()
+        run_at = getattr(lib, "ct_modem_run_at_command", None)
+        if not callable(run_at):
+            raise CometTextelError(
+                Status.UNSUPPORTED,
+                "ct_modem_run_at_command",
+                f"native C ABI version {_lib.api_version()} does not provide "
+                "generic AT command execution",
+            )
+
+        buffer = ctypes.create_string_buffer(int(response_cap))
+        status = run_at(
+            self._handle,
+            _as_utf8(command),
+            buffer,
+            int(response_cap),
+            int(timeout_ms),
+        )
+        response = buffer.value.decode("utf-8", errors="replace")
+        _check(status, "ct_modem_run_at_command")
+        return response
 
     def poll_status_report(self, timeout_ms: int = 0) -> StatusReport:
         """Drain URC input and return one SMS-STATUS-REPORT if available.

@@ -414,6 +414,36 @@ std::error_code GsmModem::send_encoded_pdu(std::string pdu_hex,
 }
 
 /**
+ * @brief Sends one AT command and waits for a final result.
+ * @param command The command to send.
+ * @param response The response buffer.
+ * @param timeout The timeout duration.
+ * @return The error code.
+ */
+std::error_code GsmModem::run_at_command(std::string_view command,
+                                         ResponseBuffer& response,
+                                         std::chrono::milliseconds timeout)
+{
+    std::lock_guard lock(mutex_);
+
+    if (!port_->is_open()) {
+        return make_error_code(Errc::NotOpen);
+    }
+
+    std::string cmd(command);
+    if (cmd.empty() || (cmd.back() != '\r' && cmd.back() != '\n')) {
+        cmd.push_back('\r');
+    }
+
+    response.data.clear();
+    if (auto ec = write_string(cmd); ec) {
+        return ec;
+    }
+
+    return wait_until_ok_unlocked(response, timeout, std::chrono::milliseconds(50));
+}
+
+/**
  * @brief Requests the message list from the modem.
  * @return The error code.
  */
@@ -800,7 +830,6 @@ std::error_code GsmModem::write_string(std::string_view text)
 {
     return port_->write(text);
 }
-
 
 /**
  * @brief Reads a string from the serial port.

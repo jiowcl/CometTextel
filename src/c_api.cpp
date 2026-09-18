@@ -371,7 +371,6 @@ int ct_modem_list(ct_modem* modem,
     return CT_OK;
 }
 
-
 /**
  * @brief Delete a message from the modem.
  * @param modem The modem object.
@@ -399,6 +398,49 @@ int ct_modem_poll_status_report(ct_modem* modem,
     return CT_OK;
 }
 
+/**
+ * @brief Run an AT command on the modem.
+ * @param modem The modem object.
+ * @param command The AT command to run.
+ * @param out_response The destination response buffer.
+ * @param out_response_cap The destination response buffer capacity.
+ * @param timeout_ms The timeout in milliseconds.
+ * @return The C API status code.
+ */
+int ct_modem_run_at_command(ct_modem* modem,
+                            const char* command,
+                            char* out_response,
+                            int out_response_cap,
+                            int timeout_ms)
+{
+    if (modem == nullptr || command == nullptr || out_response == nullptr || out_response_cap <= 0) {
+        return CT_ERR_INVALID_ARGUMENT;
+    }
+
+    out_response[0] = '\0';
+
+    comettextel::ResponseBuffer buffer;
+    const auto timeout = std::chrono::milliseconds(timeout_ms > 0 ? timeout_ms : 3000);
+    const auto ec = modem->impl.run_at_command(command, buffer, timeout);
+
+    const std::size_t max_copy =
+        static_cast<std::size_t>(out_response_cap > 0 ? out_response_cap - 1 : 0);
+    const std::size_t copy_len = std::min(buffer.data.size(), max_copy);
+    if (copy_len > 0) {
+        std::memcpy(out_response, buffer.data.data(), copy_len);
+    }
+    out_response[copy_len] = '\0';
+
+    return map_error(ec);
+}
+
+/**
+ * @brief Delete a message from the modem.
+ * @param modem The modem object.
+ * @param index The index of the message to delete.
+ * @param timeout_ms The timeout in milliseconds.
+ * @return The C API status code.
+ */
 int ct_modem_delete(ct_modem* modem, int index, int timeout_ms)
 {
     if (modem == nullptr) {
