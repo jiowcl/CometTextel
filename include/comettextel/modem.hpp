@@ -11,6 +11,8 @@
 
 #include <chrono>
 #include <cstddef>
+#include <deque>
+#include <mutex>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -27,6 +29,10 @@ namespace comettextel {
  *
  * Owns no serial handle by default; callers pass an already-opened @ref SerialPort
  * or let @ref open_and_init create one.
+ *
+ * Unsolicited result codes (URCs) such as @c +CDS are demultiplexed out of
+ * command responses into an internal Status Report queue. Public methods are
+ * internally synchronized; overlapping calls from multiple threads serialize.
  */
 class COMETTEXTEL_API GsmModem {
 public:
@@ -51,7 +57,8 @@ public:
                                                 const SerialConfig& config = {});
 
     /**
-     * @brief Sends AT, disables echo, and switches to PDU mode (@c AT+CMGF=0).
+     * @brief Sends AT, disables echo, switches to PDU mode, and best-effort
+     *        configures @c AT+CNMI for status-report URCs.
      * @return Empty error_code on success.
      */
     [[nodiscard]] std::error_code initialize();
@@ -99,6 +106,8 @@ public:
      * @brief Appends freshly received serial data to @p buffer and classifies status.
      * @param buffer The buffer to classify.
      * @return The modem response.
+     *
+     * @note URCs are stripped from @p buffer and queued when recognized.
      */
     [[nodiscard]] ModemResponse poll_response(ResponseBuffer& buffer);
 
@@ -128,6 +137,34 @@ public:
         std::chrono::milliseconds poll_interval = std::chrono::milliseconds(50));
 
     /**
+     * @brief Drains the serial port and returns one queued SMS-STATUS-REPORT.
+     * @param out Receives the decoded status report.
+     * @param timeout Wait budget after an initial drain; @c 0 is non-blocking.
+     * @return Empty on success; @ref Errc::Timeout when none is available;
+     *         @ref Errc::NotOpen when the port is closed.
+     */
+    [[nodiscard]] std::error_code poll_status_report(
+        Message& out,
+        std::chrono::milliseconds timeout = std::chrono::milliseconds(0));
+
+    /**
+     * @brief Number of decoded status reports waiting in the queue.
+     * @return Queued report count (does not read the serial port).
+     */
+    [[nodiscard]] std::size_t pending_status_reports() const;
+
+    /**
+     * @brief Removes recognized URCs from @p stream.
+     * @param stream Mutable modem text; complete URC blocks are erased.
+     * @param out_status_reports Receives decoded SMS-STATUS-REPORT messages.
+     *
+     * Incomplete trailing URC fragments are left in @p stream. Single-line
+     * indications (@c +CMTI, @c +CDSI) and two-line @c +CMT blocks are stripped
+     * without decoding. @c +CDS PDU blocks are decoded when valid.
+     */
+    static void demux_urcs(std::string& stream, std::vector<Message>& out_status_reports);
+
+    /**
      * @brief Parses @c +CMGL lines from a completed response buffer.
      * @param buffer The buffer to parse.
      * @return The message list (complete concat sets are reassembled; see
@@ -151,6 +188,8 @@ private:
     SerialPort* port_;
     SerialPort owned_port_{};
     bool owns_port_{false};
+    mutable std::recursive_mutex mutex_{};
+    std::deque<Message> status_reports_{};
 
     /**
      * @brief Writes a string to the modem.
@@ -185,6 +224,38 @@ private:
         std::string pdu_hex,
         std::size_t* bytes_written,
         std::chrono::milliseconds timeout);
+
+    /**
+     * @brief Best-effort @c AT+CNMI configuration for delivery reports.
+     */
+    void configure_status_report_urc();
+
+    /**
+     * @brief Demux URCs from @p buffer into @ref status_reports_.
+     * @param buffer Command-response accumulator.
+     */
+    void demux_into_queue(ResponseBuffer& buffer);
+
+    /**
+     * @brief @ref poll_response implementation (caller holds @ref mutex_).
+     */
+    [[nodiscard]] ModemResponse poll_response_unlocked(ResponseBuffer& buffer);
+
+    /**
+     * @brief @ref wait_for_response implementation (caller holds @ref mutex_).
+     */
+    [[nodiscard]] ModemResponse wait_for_response_unlocked(
+        ResponseBuffer& buffer,
+        std::chrono::milliseconds timeout,
+        std::chrono::milliseconds poll_interval);
+
+    /**
+     * @brief @ref wait_until_ok implementation (caller holds @ref mutex_).
+     */
+    [[nodiscard]] std::error_code wait_until_ok_unlocked(
+        ResponseBuffer& buffer,
+        std::chrono::milliseconds timeout,
+        std::chrono::milliseconds poll_interval);
 };
 
 } // namespace comettextel

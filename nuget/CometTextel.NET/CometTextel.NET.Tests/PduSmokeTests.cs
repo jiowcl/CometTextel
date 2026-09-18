@@ -117,7 +117,7 @@ public sealed class PduSmokeTests
     [Fact]
     public void ApiVersion_IsCurrent()
     {
-        Assert.True(Pdu.ApiVersion >= 2);
+        Assert.True(Pdu.ApiVersion >= 3);
     }
 
     [Fact]

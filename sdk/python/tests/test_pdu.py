@@ -159,4 +159,4 @@ def test_status_report_decode() -> None:
 
 
 def test_api_version() -> None:
-    assert api_version() >= 2
+    assert api_version() >= 3

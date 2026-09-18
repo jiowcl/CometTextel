@@ -826,9 +826,49 @@ void test_c_api_version()
 {
 #if defined(COMETTEXTEL_HAS_C_API)
     CHECK(ct_api_version() == CT_API_VERSION);
+    CHECK(CT_API_VERSION >= 3);
 #else
     CHECK(true);
 #endif
+}
+
+void test_demux_status_report_urc()
+{
+    constexpr char kPdu[] =
+        "00022A0C91889621436587215070418045232150704180452300";
+
+    std::string stream =
+        "\r\n+CDS: 25\r\n" + std::string{kPdu} + "\r\n\r\nOK\r\n";
+    std::vector<comettextel::Message> reports;
+    comettextel::GsmModem::demux_urcs(stream, reports);
+
+    CHECK(reports.size() == 1);
+    CHECK(reports[0].is_status_report);
+    CHECK(reports[0].message_reference == 0x2A);
+    CHECK(reports[0].tp_status == 0x00);
+    CHECK(reports[0].peer_address == "886912345678");
+    CHECK(stream.find("+CDS:") == std::string::npos);
+    CHECK(comettextel::GsmModem::classify_response(stream) ==
+          comettextel::ModemResponse::Ok);
+}
+
+void test_demux_strips_indication_and_preserves_prompt()
+{
+    std::string stream = "\r\n+CMTI: \"SM\",1\r\n>";
+    std::vector<comettextel::Message> reports;
+    comettextel::GsmModem::demux_urcs(stream, reports);
+    CHECK(reports.empty());
+    CHECK(stream.find("+CMTI:") == std::string::npos);
+    CHECK(stream.find('>') != std::string::npos);
+}
+
+void test_demux_leaves_incomplete_cds()
+{
+    std::string stream = "\r\n+CDS: 25\r\n00022A";
+    std::vector<comettextel::Message> reports;
+    comettextel::GsmModem::demux_urcs(stream, reports);
+    CHECK(reports.empty());
+    CHECK(stream.find("+CDS:") != std::string::npos);
 }
 
 void test_c_api_submit_options()
@@ -963,6 +1003,9 @@ int main()
     test_parse_message_list_reassembles();
     test_c_api_pdu_roundtrip();
     test_c_api_version();
+    test_demux_status_report_urc();
+    test_demux_strips_indication_and_preserves_prompt();
+    test_demux_leaves_incomplete_cds();
     test_c_api_submit_options();
     test_c_api_status_report();
     test_c_api_concat_fields();

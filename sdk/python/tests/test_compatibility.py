@@ -91,6 +91,8 @@ def test_legacy_dll_keeps_existing_api_usable(monkeypatch: pytest.MonkeyPatch, t
     assert error.value.status == Status.UNSUPPORTED
     assert "version 1" in str(error.value)
 
+    assert not callable(getattr(loaded, "ct_modem_poll_status_report", None))
+
 
 def test_noncallable_optional_exports_are_ignored(
     monkeypatch: pytest.MonkeyPatch,

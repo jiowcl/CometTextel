@@ -256,6 +256,12 @@ def load(path: Optional[str | Path] = None) -> ctypes.CDLL:
     loaded.ct_modem_delete.argtypes = [c_void_p, c_int, c_int]
     loaded.ct_modem_delete.restype = c_int
 
+    # Added in C ABI version 3.
+    poll_status = getattr(loaded, "ct_modem_poll_status_report", None)
+    if callable(poll_status):
+        poll_status.argtypes = [c_void_p, POINTER(CtStatusReport), c_int]
+        poll_status.restype = c_int
+
     loaded.ct_pdu_encode_submit.argtypes = [
         c_char_p,
         c_char_p,

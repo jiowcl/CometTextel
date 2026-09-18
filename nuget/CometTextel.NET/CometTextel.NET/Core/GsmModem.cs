@@ -128,6 +128,44 @@ namespace CometTextel.NET.Core
             Pdu.EnsureOk(NativeMethods.ct_modem_delete(_handle, index, timeoutMs));
         }
 
+        /// <summary>
+        /// Drains unsolicited modem input and returns one SMS-STATUS-REPORT.
+        /// </summary>
+        /// <param name="timeoutMs">Wait after an initial drain; 0 is non-blocking.</param>
+        /// <returns>The decoded status report.</returns>
+        public StatusReport PollStatusReport(
+            int timeoutMs = 0)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+
+            bool hasVersionExport = NativeMethods.TryGetApiVersion(out int apiVersion);
+
+            if (!hasVersionExport || apiVersion < NativeMethods.ModemStatusReportApiVersion)
+            {
+                throw new CometTextelException(
+                    Enums.ErrUnsupported,
+                    $"native C ABI version {apiVersion} does not provide modem Status Report polling");
+            }
+
+            int status;
+            NativeMethods.CtStatusReport native;
+
+            try
+            {
+                status = NativeMethods.ct_modem_poll_status_report(_handle, out native, timeoutMs);
+            }
+            catch (EntryPointNotFoundException)
+            {
+                throw new CometTextelException(
+                    Enums.ErrUnsupported,
+                    "native C ABI does not export ct_modem_poll_status_report");
+            }
+
+            Pdu.EnsureOk(status);
+
+            return StatusReport.FromNative(native);
+        }
+
         /// <inheritdoc />
         /// <summary>
         /// Disposes of the GsmModem.

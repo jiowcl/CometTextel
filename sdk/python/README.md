@@ -158,8 +158,9 @@ hex_pdu = encode_submit(
 ```
 
 The same keyword arguments are available on `encode_submit_segments()` and
-`GsmModem.send()`. A status report is only requested here; parsing and modem
-delivery-event tracking are not yet provided.
+`GsmModem.send()`. After requesting a report, call
+`modem.poll_status_report()` (C ABI v3) to drain `+CDS` URCs. Older native
+libraries raise `Status.UNSUPPORTED` for that method while other APIs remain usable.
 
 ## See also
 

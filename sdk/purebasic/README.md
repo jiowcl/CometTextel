@@ -97,6 +97,7 @@ No arguments on `pdu_example` runs a self-check:
   (`message_reference`, `tp_status`, recipient, service and discharge timestamps).
 - `CtGetApiVersion()` reports the native C ABI version; legacy DLLs are treated
   as version 1 and return `#CT_ERR_UNSUPPORTED` for status-report decoding.
+- `CtModemPollStatusReport` (C ABI v3) drains `+CDS` URCs into `CtStatusReport`.
 - `ct_pdu_encode_submit` is single-segment; `ct_pdu_encode_submit_segments` auto-splits with concat UDH.
 - `#CT_DCS_GSM7` uses GSM 03.38 (UTF-8 in/out, ESC extension); alphabet outliers need `#CT_DCS_UCS2`.
 - `CtEncodeSubmit*` / `CtModemSend` omit TP-VP by default. Pass `relativeValidityPeriod` 0..255

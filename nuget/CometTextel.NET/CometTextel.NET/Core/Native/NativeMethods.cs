@@ -20,6 +20,9 @@ namespace CometTextel.NET.Core.Native
         // Status report API version.
         internal const int StatusReportApiVersion = 2;
 
+        // Modem Status Report poll API version.
+        internal const int ModemStatusReportApiVersion = 3;
+
         /// <summary>
         /// Returns the native C ABI feature version.
         /// </summary>
@@ -248,6 +251,19 @@ namespace CometTextel.NET.Core.Native
         /// <returns>The error code.</returns>
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
         public static extern int ct_modem_delete(IntPtr modem, int index, int timeoutMs);
+
+        /// <summary>
+        /// Drains unsolicited modem input and returns one SMS-STATUS-REPORT.
+        /// </summary>
+        /// <param name="modem">The modem to poll the status report from.</param>
+        /// <param name="outReport">The output status report.</param>
+        /// <param name="timeoutMs">The timeout in milliseconds.</param>
+        /// <returns>The error code.</returns>
+        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int ct_modem_poll_status_report(
+            IntPtr modem,
+            out CtStatusReport outReport,
+            int timeoutMs);
 
         /// <summary>
         /// Encodes a PDU hex string into a <c>ct_message</c>.

@@ -11,8 +11,8 @@ from types import TracebackType
 from typing import Optional, Type
 
 from . import _lib
-from .errors import CometTextelError
-from .pdu import DCS_UCS2, Message, _as_utf8, _check, message_from_ct
+from .errors import CometTextelError, Status
+from .pdu import DCS_UCS2, Message, StatusReport, _as_utf8, _c_z, _check, message_from_ct
 
 
 class GsmModem:
@@ -131,3 +131,32 @@ class GsmModem:
         lib = self._ensure_open()
         status = lib.ct_modem_delete(self._handle, int(index), int(timeout_ms))
         _check(status, "ct_modem_delete")
+
+    def poll_status_report(self, timeout_ms: int = 0) -> StatusReport:
+        """Drain URC input and return one SMS-STATUS-REPORT if available.
+
+        ``timeout_ms=0`` is non-blocking after a single drain. Raises
+        ``CometTextelError`` with ``Status.TIMEOUT`` when none is queued, or
+        ``Status.UNSUPPORTED`` when the native library is older than C ABI v3.
+        """
+
+        lib = self._ensure_open()
+        poll = getattr(lib, "ct_modem_poll_status_report", None)
+        if not callable(poll):
+            raise CometTextelError(
+                Status.UNSUPPORTED,
+                "ct_modem_poll_status_report",
+                f"native C ABI version {_lib.api_version()} does not provide "
+                "modem Status Report polling",
+            )
+
+        out = _lib.CtStatusReport()
+        status = poll(self._handle, ctypes.byref(out), int(timeout_ms))
+        _check(status, "ct_modem_poll_status_report")
+        return StatusReport(
+            message_reference=int(out.message_reference),
+            tp_status=int(out.tp_status),
+            recipient_address=_c_z(out.recipient_address),
+            service_timestamp=_c_z(out.service_timestamp),
+            discharge_time=_c_z(out.discharge_time),
+        )

@@ -379,6 +379,26 @@ int ct_modem_list(ct_modem* modem,
  * @param timeout_ms The timeout in milliseconds.
  * @return The C API status code.
  */
+int ct_modem_poll_status_report(ct_modem* modem,
+                                ct_status_report* out,
+                                int timeout_ms)
+{
+    if (modem == nullptr || out == nullptr) {
+        return CT_ERR_INVALID_ARGUMENT;
+    }
+
+    comettextel::Message report;
+    const auto timeout = std::chrono::milliseconds(timeout_ms > 0 ? timeout_ms : 0);
+
+    if (const auto ec = modem->impl.poll_status_report(report, timeout); ec) {
+        return map_error(ec);
+    }
+
+    fill_status_report(out, report);
+    
+    return CT_OK;
+}
+
 int ct_modem_delete(ct_modem* modem, int index, int timeout_ms)
 {
     if (modem == nullptr) {

@@ -35,6 +35,7 @@ CompilerEndIf
 #CT_DCS_UCS2 = 8
 #CT_API_VERSION_LEGACY = 1
 #CT_API_VERSION_STATUS_REPORT = 2
+#CT_API_VERSION_MODEM_STATUS_REPORT = 3
 
 ; Layout must match struct ct_message in c_api.h (C alignment).
 Structure CtMessage Align #PB_Structure_AlignC
@@ -69,6 +70,7 @@ PrototypeC.l Proto_ct_modem_send(*modem, *smsc, *destination, *text, dcs.l, time
 PrototypeC.l Proto_ct_modem_send_ex(*modem, *smsc, *destination, *text, dcs.l, relativeValidityPeriod.l, requestStatusReport.l, timeoutMs.l)
 PrototypeC.l Proto_ct_modem_list(*modem, *outMessages, maxCount.l, *outCount, timeoutMs.l)
 PrototypeC.l Proto_ct_modem_delete(*modem, index.l, timeoutMs.l)
+PrototypeC.l Proto_ct_modem_poll_status_report(*modem, *out, timeoutMs.l)
 PrototypeC.l Proto_ct_pdu_encode_submit(*smsc, *destination, *text, dcs.l, *out_hex, out_hex_cap.i)
 PrototypeC.l Proto_ct_pdu_encode_submit_ex(*smsc, *destination, *text, dcs.l, relativeValidityPeriod.l, requestStatusReport.l, *out_hex, out_hex_cap.i)
 PrototypeC.l Proto_ct_pdu_encode_submit_segments(*smsc, *destination, *text, dcs.l, *out_hex, out_hex_cap.i, *out_count)
@@ -97,6 +99,7 @@ Global ct_modem_send.Proto_ct_modem_send
 Global ct_modem_send_ex.Proto_ct_modem_send_ex
 Global ct_modem_list.Proto_ct_modem_list
 Global ct_modem_delete.Proto_ct_modem_delete
+Global ct_modem_poll_status_report.Proto_ct_modem_poll_status_report
 Global ct_pdu_encode_submit.Proto_ct_pdu_encode_submit
 Global ct_pdu_encode_submit_ex.Proto_ct_pdu_encode_submit_ex
 Global ct_pdu_encode_submit_segments.Proto_ct_pdu_encode_submit_segments
@@ -239,6 +242,9 @@ Procedure.i CtInit(dllPath.s = "comettextel.dll")
   If *fn = 0 : FreeLibrary(CtLib) : CtLib = 0 : ProcedureReturn 0 : EndIf
   ct_modem_delete = *fn
 
+  ; Added in C ABI version 3. Keep this export optional for legacy DLLs.
+  ct_modem_poll_status_report = GetProcAddress(CtLib, "ct_modem_poll_status_report")
+
   *fn = CtBindExport("ct_pdu_encode_submit")
 
   If *fn = 0
@@ -301,6 +307,7 @@ Procedure CtShutdown()
   ct_modem_send_ex = 0
   ct_modem_list = 0
   ct_modem_delete = 0
+  ct_modem_poll_status_report = 0
   ct_pdu_encode_submit = 0
   ct_pdu_encode_submit_ex = 0
   ct_pdu_encode_submit_segments = 0
@@ -738,6 +745,30 @@ Procedure.l CtModemDelete(*modem, index.l, timeoutMs.l = 5000)
   EndIf
 
   ProcedureReturn ct_modem_delete(*modem, index, timeoutMs)
+EndProcedure
+
+; <summary>
+; CtModemPollStatusReport
+; </summary>
+; <param name="*modem">Pointer</param>
+; <param name="*out">status report structure</param>
+; <param name="timeoutMs">long</param>
+; <returns>Returns long.</returns>
+Procedure.l CtModemPollStatusReport(*modem, *out.CtStatusReport, timeoutMs.l = 0)
+  If CtLib = 0 Or *modem = 0
+    ProcedureReturn #CT_ERR_NOT_OPEN
+  EndIf
+
+  If *out = 0
+    ProcedureReturn #CT_ERR_INVALID_ARGUMENT
+  EndIf
+
+  If CtApiVersion < #CT_API_VERSION_MODEM_STATUS_REPORT Or ct_modem_poll_status_report = 0
+    ProcedureReturn #CT_ERR_UNSUPPORTED
+  EndIf
+
+  FillMemory(*out, SizeOf(CtStatusReport))
+  ProcedureReturn ct_modem_poll_status_report(*modem, *out, timeoutMs)
 EndProcedure
 
 ; IDE Options = PureBasic 6.41 (Windows - x64)

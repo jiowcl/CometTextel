@@ -47,7 +47,7 @@ enum ct_status {
 };
 
 /** @brief Current C ABI feature version. */
-#define CT_API_VERSION 2
+#define CT_API_VERSION 3
 
 /** @brief TP-DCS values. */
 enum ct_dcs {
@@ -184,6 +184,21 @@ CT_API int ct_modem_list(ct_modem* modem,
  * @return The status code.
  */
 CT_API int ct_modem_delete(ct_modem* modem, int index, int timeout_ms);
+
+/**
+ * @brief Drains unsolicited modem input and returns one SMS-STATUS-REPORT.
+ * @param modem The modem object.
+ * @param out Receives the decoded status report.
+ * @param timeout_ms Wait after an initial drain; 0 is non-blocking.
+ * @return CT_OK when a report is returned; CT_ERR_TIMEOUT when none is
+ *         available; CT_ERR_NOT_OPEN when the modem is closed.
+ *
+ * @note Requires C ABI version 3. Reports arrive as @c +CDS URCs when the
+ *       modem accepted @c AT+CNMI during @ref ct_modem_open.
+ */
+CT_API int ct_modem_poll_status_report(ct_modem* modem,
+                                       ct_status_report* out,
+                                       int timeout_ms);
 
 /**
  * @brief Encodes a submit PDU hex string (no modem I/O).
