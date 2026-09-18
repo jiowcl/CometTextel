@@ -9,6 +9,7 @@
 
 #include "comettextel/serial.hpp"
 #include "comettextel/types.hpp"
+#include "serial_memory.hpp"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -54,6 +55,7 @@ namespace {
 struct SerialPort::Impl {
     int fd{-1};
     std::string device;
+    serial_detail::MemoryState memory{};
 };
 
 /**
@@ -92,7 +94,6 @@ SerialPort& SerialPort::operator=(SerialPort&& other) noexcept
 
     return *this;
 }
-
 
 /**
  * @brief Open the serial port.
@@ -204,6 +205,49 @@ std::error_code SerialPort::open(std::string_view device, const SerialConfig& co
     return {};
 }
 
+/**
+ * @brief Opens the serial port in memory mode.
+ * @param responder The responder to use.
+ * @return The error code.
+ */
+std::error_code SerialPort::open_memory(SerialMemoryResponder responder)
+{
+    if (!impl_) {
+        impl_ = std::make_unique<Impl>();
+    }
+
+    if (is_open()) {
+        return make_error_code(Errc::AlreadyOpen);
+    }
+
+    serial_detail::memory_enable(impl_->memory, std::move(responder));
+    impl_->device = "memory:";
+    return {};
+}
+
+/**
+ * @brief Pushes the RX data to the memory.
+ * @param data The RX data to push.
+ */
+void SerialPort::memory_push_rx(std::string_view data)
+{
+    if (!impl_) {
+        return;
+    }
+    serial_detail::memory_push_rx(impl_->memory, data);
+}
+
+/**
+ * @brief Takes the next TX data from the memory.
+ * @return The TX data.
+ */
+std::string SerialPort::memory_take_tx()
+{
+    if (!impl_) {
+        return {};
+    }
+    return serial_detail::memory_take_tx(impl_->memory);
+}
 
 /**
  * @brief Close the serial port.
@@ -219,9 +263,9 @@ void SerialPort::close() noexcept
         impl_->fd = -1;
     }
 
+    serial_detail::memory_reset(impl_->memory);
     impl_->device.clear();
 }
-
 
 /**
  * @brief Check if the serial port is open.
@@ -229,7 +273,7 @@ void SerialPort::close() noexcept
  */
 bool SerialPort::is_open() const noexcept
 {
-    return impl_ && impl_->fd >= 0;
+    return impl_ && (impl_->memory.enabled || impl_->fd >= 0);
 }
 
 /**
@@ -249,6 +293,12 @@ std::error_code SerialPort::write(std::span<const std::byte> data, std::size_t* 
             *written = 0;
         }
 
+        return {};
+    }
+
+    const std::string_view view{
+        reinterpret_cast<const char*>(data.data()), data.size()};
+    if (serial_detail::memory_write(impl_->memory, view, written)) {
         return {};
     }
 
@@ -323,6 +373,10 @@ std::error_code SerialPort::read(std::span<std::byte> buffer, std::size_t& read_
     }
 
     if (buffer.empty()) {
+        return {};
+    }
+
+    if (serial_detail::memory_read(impl_->memory, buffer, read_count)) {
         return {};
     }
 

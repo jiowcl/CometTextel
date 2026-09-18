@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.7.0
 
 - Demultiplex modem URCs (`+CDS`, `+CMT`, `+CMTI`, `+CDSI`) out of command
   responses so Status Reports do not corrupt OK / `>` waits.
@@ -8,6 +8,7 @@
 - Add `GsmModem::poll_status_report` and C ABI `ct_modem_poll_status_report`
   (feature version 3); synchronize Python, .NET, PureBasic, and FreeBASIC.
 - Internal recursive mutex serializes overlapping modem calls.
+- Add in-memory `SerialPort` scripted backend for modem integration tests.
 
 ## 1.6.0
 

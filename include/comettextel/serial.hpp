@@ -12,6 +12,7 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <span>
 #include <string>
@@ -22,6 +23,14 @@
 #include "comettextel/export.hpp"
 
 namespace comettextel {
+
+/**
+ * @brief Optional callback that turns scripted writes into RX bytes for tests.
+ *
+ * Invoked after each successful @ref SerialPort::write while the port is in
+ * memory mode. The returned string is appended to the in-memory RX queue.
+ */
+using SerialMemoryResponder = std::function<std::string(std::string_view written)>;
 
 /**
  * @brief Serial parity mode.
@@ -81,6 +90,28 @@ public:
      * @return Empty error_code on success.
      */
     [[nodiscard]] std::error_code open(std::string_view device, const SerialConfig& config = {});
+
+    /**
+     * @brief Opens an in-memory scripted port (no OS device).
+     * @param responder Optional write→RX callback for modem integration tests.
+     * @return Empty error_code on success.
+     *
+     * @note Intended for unit / integration tests. @ref write records TX and
+     *       may enqueue RX via @p responder; @ref read drains the RX queue.
+     */
+    [[nodiscard]] std::error_code open_memory(SerialMemoryResponder responder = {});
+
+    /**
+     * @brief Appends bytes to the in-memory RX queue.
+     * @param data Bytes to make available to the next @ref read.
+     */
+    void memory_push_rx(std::string_view data);
+
+    /**
+     * @brief Returns and clears bytes written while in memory mode.
+     * @return Captured TX log since the last take/clear.
+     */
+    [[nodiscard]] std::string memory_take_tx();
 
     /**
      * @brief Closes the port if it is open.
