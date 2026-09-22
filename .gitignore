@@ -1,5 +1,7 @@
 # Build
 build/
+build-mingw/
+build-msvc/
 build-*/
 build-nuget/
 cmake-build-*/
