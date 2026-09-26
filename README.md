@@ -248,6 +248,12 @@ comettextel/
 Copyright (c) 2026 Ji-Feng Tsai.  
 Code released under the MIT license.  
 
+## Official Partners & Commercial Editions  
+
+This project collaborate with companies that offer commercial versions, hosted services, or enterprise support based on CometTextel:  
+
+**[KJPro Technology](https://kjprotech.com/en-us/product/textel-pro)** - Official Commercial Partner providing enterprise distribution, custom integration, and dedicated support.  
+
 ## TODO  
 
 - Longer modem async I/O / overlapped serial (beyond URC demux + poll queue)
