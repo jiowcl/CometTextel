@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.7.1
+
+- Add `GsmModem::run_at_command` and C ABI `ct_modem_run_at_command`
+  (feature version 3) for generic AT queries with URC demux during the wait;
+  synchronize Python, .NET, PureBasic, and FreeBASIC.
+- Document that `ct_modem_run_at_command` truncates the response to
+  `out_response_cap - 1` bytes (NUL-terminated) without a separate overflow
+  status; modem OK/ERROR is still reported via the return code.
+- Stop tracking Python `__pycache__` / `*.pyc` artifacts.
+- Add .NET `RunAtCommand` argument smoke tests and C ABI truncation fixture.
+
 ## 1.7.0
 
 - Demultiplex modem URCs (`+CDS`, `+CMT`, `+CMTI`, `+CDSI`) out of command
@@ -7,8 +18,6 @@
 - Best-effort `AT+CNMI` during modem initialize to route delivery reports.
 - Add `GsmModem::poll_status_report` and C ABI `ct_modem_poll_status_report`
   (feature version 3); synchronize Python, .NET, PureBasic, and FreeBASIC.
-- Add `GsmModem::run_at_command` and C ABI `ct_modem_run_at_command`
-  (feature version 3) for generic AT queries with URC demux during the wait.
 - Internal recursive mutex serializes overlapping modem calls.
 - Add in-memory `SerialPort` scripted backend for modem integration tests.
 

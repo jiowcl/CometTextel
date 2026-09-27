@@ -149,6 +149,23 @@ public sealed class PduSmokeTests
     }
 
     [Fact]
+    public void RunAtCommand_EmptyCommand_Throws()
+    {
+        using GsmModem modem = new();
+        Assert.Throws<ArgumentException>(() => modem.RunAtCommand(""));
+    }
+
+    [Fact]
+    public void RunAtCommand_NonPositiveResponseCap_Throws()
+    {
+        using GsmModem modem = new();
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            modem.RunAtCommand("AT", responseCap: 0));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            modem.RunAtCommand("AT", responseCap: -1));
+    }
+
+    [Fact]
     public void EncodeSubmitSegments_Short_MatchesEncodeSubmit()
     {
         const string destination = "886912345678";

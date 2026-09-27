@@ -59,6 +59,12 @@ The C++ core exposes status-report decoding. In .NET use
 `Pdu.ApiVersion` reports the native C ABI feature version; a legacy DLL is
 reported as version 1 and produces a clear unsupported error for this method.
 
+### Generic AT commands
+
+`GsmModem.RunAtCommand("AT+CSQ")` (C ABI v3) sends one command, waits for
+OK/ERROR with URC demux, and returns the accumulated modem text. A trailing CR
+is appended when missing.
+
 ### Strings
 
 All text fields are **UTF-8** at the native boundary (`LPUTF8Str` / UTF-8 byte fields). Prefer ASCII digits for SMSC / destination addresses.

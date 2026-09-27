@@ -32,4 +32,7 @@ sdk/**/libcomettextel.so*
 sdk/python/setup.cfg
 sdk/python/build/
 sdk/python/*.egg-info/
+sdk/python/**/__pycache__/
+sdk/python/**/*.pyc
+.pytest_cache/
 .tools/

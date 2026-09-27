@@ -210,6 +210,10 @@ CT_API int ct_modem_poll_status_report(ct_modem* modem,
  * @return CT_OK on success; partial text may still be written on error.
  *
  * @note Requires C ABI version 3. URCs are demultiplexed during the wait.
+ * @note On success or failure the accumulated text is copied into
+ *       @p out_response and truncated to @p out_response_cap - 1 bytes with a
+ *       trailing NUL. Truncation does not produce a separate status code; the
+ *       return value still reflects modem OK / ERROR / timeout.
  */
 CT_API int ct_modem_run_at_command(ct_modem* modem,
                                    const char* command,

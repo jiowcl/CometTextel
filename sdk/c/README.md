@@ -92,6 +92,8 @@ returns one queued report (`timeout_ms=0` is non-blocking).
 
 `ct_modem_run_at_command` (C ABI v3) sends one AT command, waits for OK/ERROR,
 and writes accumulated modem text into a caller buffer (URCs are demultiplexed).
+The buffer is always NUL-terminated and truncated to `out_response_cap - 1`
+bytes when needed; truncation does not change the status code.
 
 ### GSM 7-bit (`CT_DCS_GSM7`)
 

@@ -7,7 +7,9 @@
  * @copyright Copyright (c) 2026 Jiowcl. All rights reserved.
  */
 
+#include <algorithm>
 #include <chrono>
+#include <cstring>
 #include <iostream>
 #include <string>
 #include <string_view>
@@ -190,6 +192,38 @@ void test_run_at_command_csq()
     CHECK(response.data.find("OK") != std::string::npos);
 }
 
+void test_run_at_command_response_truncation_contract()
+{
+    // Mirrors ct_modem_run_at_command: copy min(size, cap-1) then NUL-terminate.
+    // C ABI cannot open the in-memory serial backend, so the copy contract is
+    // exercised here against a long scripted response.
+    comettextel::SerialPort port;
+    const std::string long_payload(512, 'X');
+    CHECK(!port.open_memory([&](std::string_view cmd) -> std::string {
+        if (cmd.rfind("AT+CSQ", 0) == 0) {
+            return std::string("\r\n+CSQ: ") + long_payload + "\r\n" + ok_response();
+        }
+        return ok_response();
+    }));
+
+    comettextel::GsmModem modem(port);
+    comettextel::ResponseBuffer response;
+    CHECK(!modem.run_at_command("AT+CSQ", response, std::chrono::seconds(3)));
+    CHECK(response.data.size() > 64);
+
+    char out[64]{};
+    constexpr int out_cap = static_cast<int>(sizeof(out));
+    const std::size_t max_copy = static_cast<std::size_t>(out_cap - 1);
+    const std::size_t copy_len = std::min(response.data.size(), max_copy);
+    std::memcpy(out, response.data.data(), copy_len);
+    out[copy_len] = '\0';
+
+    CHECK(copy_len == max_copy);
+    CHECK(out[out_cap - 1] == '\0');
+    CHECK(std::string_view(out).size() == max_copy);
+    CHECK(response.data.compare(0, max_copy, out) == 0);
+}
+
 #ifdef COMETTEXTEL_BUILD_C_API
 void test_c_api_run_at_command_not_open()
 {
@@ -245,6 +279,7 @@ int main()
     test_cds_interleaved_with_ok_is_queued();
     test_cds_interleaved_with_prompt_still_sends();
     test_run_at_command_csq();
+    test_run_at_command_response_truncation_contract();
 #ifdef COMETTEXTEL_BUILD_C_API
     test_c_api_run_at_command_not_open();
     test_c_api_run_at_command_invalid_args();
