@@ -15,4 +15,4 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on every push and pull request 
 
 Download build packages from the workflow **Artifacts** tab (retained 14 days).  
 
-For a step-by-step “download → include → link” walkthrough, see [doc/getting-started.md](https://github.com/jiowcl/CometTextel/doc/getting-started.md).  
+For a step-by-step “download → include → link” walkthrough, see [doc/getting-started.md](https://github.com/jiowcl/CometTextel/blob/main/doc/getting-started.md).  
