@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.7.2 (Pre)
+
+- Add a Windows amd64 Go sample (`sdk/go`) that runtime-loads `comettextel.dll`
+  with `syscall.LoadDLL` (no cgo): PDU self-check plus modem list / send / delete.
+
 ## 1.7.1
 
 - Add `GsmModem::run_at_command` and C ABI `ct_modem_run_at_command`

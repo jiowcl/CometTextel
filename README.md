@@ -105,7 +105,7 @@ comettextel_c_api_example pdu 886912345678 "Hello" 886932000000
 
 CI / Release also publish focused **C SDK** artifacts (`comettextel-c-sdk-*`) with only `c_api.h`, shared/static libs, and the example source — see [`sdk/c/README.md`](sdk/c/README.md).  
 
-Optional language samples (thin FFI, same shared library): [`sdk/python/`](sdk/python) (ctypes, PDU + modem; **pytest + wheels in CI**), [`sdk/purebasic/`](sdk/purebasic) (PDU + modem; local `verify.ps1`), [`sdk/freebasic/`](sdk/freebasic) (PDU + modem; local `verify.ps1`).  
+Optional language samples (thin FFI, same shared library): [`sdk/python/`](sdk/python) (ctypes, PDU + modem; **pytest + wheels in CI**), [`sdk/go/`](sdk/go) (Windows amd64 `syscall.LoadDLL`, PDU + modem; local `verify.ps1`), [`sdk/purebasic/`](sdk/purebasic) (PDU + modem; local `verify.ps1`), [`sdk/freebasic/`](sdk/freebasic) (PDU + modem; local `verify.ps1`).  
 
 ## .NET NuGet (optional)  
 
@@ -226,6 +226,7 @@ comettextel/
 ├── scripts/               # CI helpers (e.g. stage_c_sdk)
 ├── sdk/c/                 # C SDK package README template
 ├── sdk/python/            # Python ctypes PDU + modem (pytest + wheels in CI)
+├── sdk/go/                # Go PDU + modem sample (Windows amd64, local verify.ps1)
 ├── sdk/purebasic/         # PureBasic PDU + modem sample (local verify.ps1)
 ├── sdk/freebasic/         # FreeBASIC PDU + modem sample (local verify.ps1)
 ├── src/                   # Library sources

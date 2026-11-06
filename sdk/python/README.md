@@ -168,6 +168,7 @@ libraries raise `Status.UNSUPPORTED` for that method while other APIs remain usa
 
 - [`include/comettextel/c_api.h`](https://github.com/jiowcl/CometTextel/blob/main/include/comettextel/c_api.h)
 - [`sdk/c/README.md`](https://github.com/jiowcl/CometTextel/blob/main/sdk/c/README.md)
+- [`sdk/go/README.md`](https://github.com/jiowcl/CometTextel/blob/main/sdk/go/README.md)
 - [`sdk/freebasic/README.md`](https://github.com/jiowcl/CometTextel/blob/main/sdk/freebasic/README.md)
 - [`sdk/purebasic/README.md`](https://github.com/jiowcl/CometTextel/blob/main/sdk/purebasic/README.md)
 - [`examples/c_api_example.c`](https://github.com/jiowcl/CometTextel/blob/main/examples/c_api_example.c)

@@ -112,4 +112,5 @@ Do not reimplement PDU codecs in PureBasic. If the C ABI changes, update `comett
 - [`sdk/c/README.md`](https://github.com/jiowcl/CometTextel/blob/main/sdk/c/README.md)
 - [`sdk/freebasic/README.md`](https://github.com/jiowcl/CometTextel/blob/main/sdk/freebasic/README.md)
 - [`sdk/python/README.md`](https://github.com/jiowcl/CometTextel/blob/main/sdk/python/README.md)
+- [`sdk/go/README.md`](https://github.com/jiowcl/CometTextel/blob/main/sdk/go/README.md)
 - [`examples/c_api_example.c`](https://github.com/jiowcl/CometTextel/blob/main/examples/c_api_example.c)
