@@ -19,7 +19,7 @@
 - **Modem Helpers**: Initialize, send (`AT+CMGS`), list (`AT+CMGL`), and delete (`AT+CMGD`) in PDU mode.  
 - **Modern C++23**: RAII handles, `std::error_code`, `std::span`, and clear public headers under `include/comettextel/`.  
 - **Shared & Static**: Build `comettextel` as a DLL/shared library and/or a static archive from one CMake tree.  
-- **Multi-Language & Package Ready:** Pure C-ABI exports with high-level bindings for **C# (.NET / NuGet)**, **Python (PyPI)**, **C/C++**, **PureBasic**, and **FreeBASIC**.
+- **Multi-Language & Package Ready:** Pure C-ABI exports with high-level bindings for **C# (.NET / NuGet)**, **Go**, **Python (PyPI)**, **C/C++**, **PureBasic**, and **FreeBASIC**.
 
 For complete protocol limits, payload capacity tables, and edge-case handling, see [doc/limitations.md](doc/limitations.md).  
 
