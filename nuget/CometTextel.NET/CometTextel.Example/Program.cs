@@ -146,7 +146,8 @@ static void PrintHelp()
 /// </summary>
 /// <param name="message">The message.</param>
 /// <returns>The status code.</returns>
-static int FailHelp(string message)
+static int FailHelp(
+    string message)
 {
     Console.Error.WriteLine(message);
     PrintHelp();

@@ -102,7 +102,7 @@ namespace CometTextel.NET.Core
             ObjectDisposedException.ThrowIf(_disposed, this);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxCount);
 
-            NativeMethods.CtMessage[] buffer = new NativeMethods.CtMessage[maxCount];
+            CtMessage[] buffer = new CtMessage[maxCount];
             int status = NativeMethods.ct_modem_list(_handle, buffer, maxCount, out var count, timeoutMs);
             Pdu.EnsureOk(status);
 
@@ -206,7 +206,7 @@ namespace CometTextel.NET.Core
             }
 
             int status;
-            NativeMethods.CtStatusReport native;
+            CtStatusReport native;
 
             try
             {

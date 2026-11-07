@@ -75,7 +75,8 @@ namespace CometTextel.NET.Core
         /// <summary>
         /// Create a new SmsMessage from a native message struct.
         /// </summary>
-        internal static SmsMessage FromNative(in NativeMethods.CtMessage native) => new()
+        internal static SmsMessage FromNative(
+            in CtMessage native) => new()
         {
             Index = native.Index,
             Coding = (DataCoding)native.Dcs,

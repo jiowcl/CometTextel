@@ -165,7 +165,7 @@ namespace CometTextel.NET.Core
             }
 
             int status;
-            NativeMethods.CtStatusReport native;
+            CtStatusReport native;
 
             try
             {

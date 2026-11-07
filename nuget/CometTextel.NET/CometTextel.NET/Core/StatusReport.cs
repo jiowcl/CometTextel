@@ -40,7 +40,8 @@ public sealed class StatusReport
     /// </summary>
     /// <param name="native">The native <c>ct_status_report</c> struct.</param>
     /// <returns>The <c>StatusReport</c> instance.</returns>
-    internal static StatusReport FromNative(in NativeMethods.CtStatusReport native) => new()
+    internal static StatusReport FromNative(
+        in CtStatusReport native) => new()
     {
         MessageReference = native.MessageReference,
         TpStatus = native.TpStatus,
