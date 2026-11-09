@@ -19,7 +19,9 @@
 - **Modem Helpers**: Initialize, send (`AT+CMGS`), list (`AT+CMGL`), and delete (`AT+CMGD`) in PDU mode.  
 - **Modern C++23**: RAII handles, `std::error_code`, `std::span`, and clear public headers under `include/comettextel/`.  
 - **Shared & Static**: Build `comettextel` as a DLL/shared library and/or a static archive from one CMake tree.  
-- **Multi-Language & Package Ready:** Pure C-ABI exports with high-level bindings for **C# (.NET / NuGet)**, **Go**, **Python (PyPI)**, **C/C++**, **PureBasic**, and **FreeBASIC**.
+- **Multi-Language & Package Ready:** Pure C-ABI exports with high-level bindings for **C# (.NET / NuGet)**, **Go** (Go Packages), **Python (PyPI)**, **C/C++**, **PureBasic**, and **FreeBASIC**.
+
+## Limitations  
 
 For complete protocol limits, payload capacity tables, and edge-case handling, see [doc/limitations.md](doc/limitations.md).  
 
@@ -62,31 +64,6 @@ Run unit tests:
 cmake --build build --config Release
 ctest --test-dir build -C Release --output-on-failure
 ```
-
-## C SDK (optional)  
-
-Stable C ABI: [`include/comettextel/c_api.h`](include/comettextel/c_api.h).  
-Sample: [`examples/c_api_example.c`](examples/c_api_example.c) (built as `comettextel_c_api_example` when `COMETTEXTEL_BUILD_EXAMPLES=ON` and `COMETTEXTEL_BUILD_C_API=ON`).  
-
-```bash
-# After build (Release):
-comettextel_c_api_example pdu 886912345678 "Hello" 886932000000
-```
-
-CI / Release also publish focused **C SDK** artifacts (`comettextel-c-sdk-*`) with only `c_api.h`, shared/static libs, and the example source — see [`sdk/c/README.md`](sdk/c/README.md).  
-
-Optional language samples (thin FFI, same shared library): [`sdk/python/`](sdk/python) (ctypes, PDU + modem; **pytest + wheels in CI**), [`sdk/go/`](sdk/go) (Windows amd64 `syscall.LoadDLL`, PDU + modem; local `verify.ps1`), [`sdk/purebasic/`](sdk/purebasic) (PDU + modem; local `verify.ps1`), [`sdk/freebasic/`](sdk/freebasic) (PDU + modem; local `verify.ps1`).  
-
-## .NET NuGet (optional)  
-
-A separate C# wrapper lives under [`nuget/CometTextel.NET`](nuget/CometTextel.NET) (style similar to ThinBasic.NET):  
-
-```powershell
-cd nuget/CometTextel.NET
-.\pack.ps1
-```
-
-This builds `comettextel.dll` with the C ABI and produces `CometTextel.NET.*.nupkg` (CI also embeds **linux-x64** `libcomettextel.so`). See that folder’s README for Install-Package / Quick start.  
 
 ## Install & find_package  
 
