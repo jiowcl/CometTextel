@@ -25,6 +25,8 @@
 
 For complete protocol limits, payload capacity tables, and edge-case handling, see [doc/limitations.md](doc/limitations.md).  
 
+Contributor map of `src/pdu/` and `src/modem/` units: [doc/architecture.md](doc/architecture.md).  
+
 ## Environment  
 
 - Windows 10/11, Linux, or macOS  

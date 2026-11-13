@@ -16,6 +16,8 @@
   (`modem/detail/at_response.hpp` for OK/ERROR classification).
 - Split SMS AT helpers into `src/modem/modem_messages.cpp` (`AT+CMGS` /
   `AT+CMGL` / `AT+CMGD`, `modem/detail/cmgl.hpp` for list parsing).
+- Split modem open/initialize into `src/modem/modem_init.cpp`; add
+  [doc/architecture.md](doc/architecture.md) for internal module layout.
 
 ## 1.7.1
 
