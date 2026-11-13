@@ -14,6 +14,8 @@
   polling unchanged at the public API).
 - Split serial AT I/O and response wait into `src/modem/modem_at_io.cpp`
   (`modem/detail/at_response.hpp` for OK/ERROR classification).
+- Split SMS AT helpers into `src/modem/modem_messages.cpp` (`AT+CMGS` /
+  `AT+CMGL` / `AT+CMGD`, `modem/detail/cmgl.hpp` for list parsing).
 
 ## 1.7.1
 
