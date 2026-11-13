@@ -43,6 +43,7 @@ set(COMETTEXTEL_COMMON_SOURCES
     src/pdu/pdu_tpdu_submit.cpp
     src/pdu/pdu_tpdu_decode.cpp
     src/modem.cpp
+    src/modem/modem_urc.cpp
 )
 
 if(COMETTEXTEL_BUILD_C_API)

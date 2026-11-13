@@ -9,6 +9,9 @@
 - Split SMS-SUBMIT encode and TPDU decode/reassembly into `pdu_tpdu_submit.cpp`
   / `pdu_tpdu_decode.cpp` with shared `tpdu_common` / `tpdu_limits` (no public
   C++ / C ABI change).
+- Split modem URC handling into `src/modem/modem_urc.cpp` with
+  `modem/detail/urc.hpp` demux helpers (`GsmModem` URC queue / status-report
+  polling unchanged at the public API).
 
 ## 1.7.1
 

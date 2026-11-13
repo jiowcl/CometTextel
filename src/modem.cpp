@@ -1,6 +1,6 @@
 /**
  * @file modem.cpp
- * @brief GSM modem AT-command helper implementation.
+ * @brief GSM modem AT-command I/O (URC demux in modem/modem_urc.cpp).
  *
  * @author Ji-Feng Tsai (Jiowcl)
  * @email jiowcl@gmail.com
@@ -41,126 +41,11 @@ namespace {
     return text.find(token) != std::string_view::npos;
 }
 
-/**
- * @brief Checks if a string starts with a given prefix.
- * @param text The string to check.
- * @param prefix The prefix to check for.
- * @return true if the string starts with the prefix; false otherwise.
- */
-[[nodiscard]] bool is_line_start(std::string_view text, std::size_t index)
-{
-    if (index == 0) {
-        return true;
-    }
-    const char prev = text[index - 1];
-    return prev == '\n' || prev == '\r';
-}
-
-/**
- * @brief Finds the position of a given tag in a string.
- * @param text The string to search.
- * @param tag The tag to search for.
- * @return The position of the tag; std::string_view::npos if not found.
- */
-[[nodiscard]] std::size_t find_urc_tag(std::string_view text, std::string_view tag)
-{
-    std::size_t pos = 0;
-    while ((pos = text.find(tag, pos)) != std::string_view::npos) {
-        if (is_line_start(text, pos)) {
-            return pos;
-        }
-        ++pos;
-    }
-    return std::string_view::npos;
-}
-
-/**
- * @brief Skips spaces in a string.
- * @param text The string to search.
- * @param index The index to start searching from.
- * @return The index of the first non-space character.
- */
-[[nodiscard]] std::size_t skip_spaces(std::string_view text, std::size_t index)
-{
-    while (index < text.size() &&
-           (text[index] == ' ' || text[index] == '\t')) {
-        ++index;
-    }
-    return index;
-}
-
-/**
- * @brief Erases a range of characters in a string.
- * @param stream The string to erase from.
- * @param begin The index to start erasing from.
- * @param end The index to stop erasing at.
- */
-void erase_through(std::string& stream, std::size_t begin, std::size_t end)
-{
-    if (begin > end || end > stream.size()) {
-        return;
-    }
-    stream.erase(begin, end - begin);
-}
-
-/**
- * @brief Erase a single CRLF-terminated line starting at @p begin.
- * @return true when a complete line was removed; false when incomplete.
- */
-[[nodiscard]] bool erase_single_line(std::string& stream, std::size_t begin)
-{
-    const std::size_t nl = stream.find("\r\n", begin);
-    if (nl == std::string::npos) {
-        return false;
-    }
-    erase_through(stream, begin, nl + 2);
-    return true;
-}
-
-/**
- * @brief Erase a length-prefixed two-line URC (+CDS: / +CMT:).
- * @param decode_status When true, decode the PDU as SMS-STATUS-REPORT.
- * @return 1 erased, 0 incomplete, -1 not this form (caller may strip as text line).
- */
-[[nodiscard]] int erase_length_urc(std::string& stream,
-                                   std::size_t begin,
-                                   std::string_view tag,
-                                   bool decode_status,
-                                   std::vector<Message>* out_status_reports)
-{
-    std::size_t cursor = skip_spaces(stream, begin + tag.size());
-    if (cursor >= stream.size() ||
-        !std::isdigit(static_cast<unsigned char>(stream[cursor]))) {
-        return -1;
-    }
-
-    const std::size_t header_nl = stream.find("\r\n", cursor);
-    if (header_nl == std::string::npos) {
-        return 0;
-    }
-
-    const std::size_t pdu_begin = header_nl + 2;
-    const std::size_t pdu_nl = stream.find("\r\n", pdu_begin);
-    if (pdu_nl == std::string::npos) {
-        return 0;
-    }
-
-    if (decode_status && out_status_reports != nullptr) {
-        const std::string_view pdu{stream.data() + pdu_begin, pdu_nl - pdu_begin};
-        Message report;
-        if (!PduCodec::decode(pdu, report) && report.is_status_report) {
-            out_status_reports->push_back(std::move(report));
-        }
-    }
-
-    erase_through(stream, begin, pdu_nl + 2);
-    return 1;
-}
-
 } // namespace
 
 /**
  * @brief Constructs a new GsmModem object.
+ * @details Constructs a new GsmModem object with an owned serial port.
  */
 GsmModem::GsmModem()
     : port_(&owned_port_)
@@ -245,32 +130,6 @@ std::error_code GsmModem::initialize()
 
     configure_status_report_urc();
     return {};
-}
-
-/**
- * @brief Configures the status report URC.
- */
-void GsmModem::configure_status_report_urc()
-{
-    // Best-effort only: modem CNMI dialects vary. Prefer routing status reports
-    // (+CDS) to the TE without failing initialize when unsupported.
-    static constexpr const char* kCandidates[] = {
-        "AT+CNMI=2,1,0,1,0\r",
-        "AT+CNMI=1,1,0,1,0\r",
-        "AT+CNMI=2,0,0,1,0\r",
-    };
-
-    for (const char* cmd : kCandidates) {
-        ResponseBuffer buffer;
-        if (write_string(cmd)) {
-            continue;
-        }
-        buffer.data.clear();
-        if (!wait_until_ok_unlocked(buffer, std::chrono::seconds(2),
-                                    std::chrono::milliseconds(50))) {
-            return;
-        }
-    }
 }
 
 /**
@@ -498,83 +357,6 @@ ModemResponse GsmModem::classify_response(std::string_view data)
 }
 
 /**
- * @brief Demuxes the URCs from the modem.
- * @param stream The stream to demux.
- * @param out_status_reports The output status reports.
- */
-void GsmModem::demux_urcs(std::string& stream, std::vector<Message>& out_status_reports)
-{
-    for (;;) {
-        const std::size_t cds = find_urc_tag(stream, "+CDS:");
-        const std::size_t cmt = find_urc_tag(stream, "+CMT:");
-        const std::size_t cmti = find_urc_tag(stream, "+CMTI:");
-        const std::size_t cdsi = find_urc_tag(stream, "+CDSI:");
-
-        std::size_t begin = std::string::npos;
-        enum class Kind { Cds, Cmt, Single } kind = Kind::Single;
-        if (cds != std::string::npos) {
-            begin = cds;
-            kind = Kind::Cds;
-        }
-        if (cmt != std::string::npos && (begin == std::string::npos || cmt < begin)) {
-            begin = cmt;
-            kind = Kind::Cmt;
-        }
-        if (cmti != std::string::npos && (begin == std::string::npos || cmti < begin)) {
-            begin = cmti;
-            kind = Kind::Single;
-        }
-        if (cdsi != std::string::npos && (begin == std::string::npos || cdsi < begin)) {
-            begin = cdsi;
-            kind = Kind::Single;
-        }
-
-        if (begin == std::string::npos) {
-            return;
-        }
-
-        if (kind == Kind::Cds) {
-            const int rc = erase_length_urc(stream, begin, "+CDS:", true, &out_status_reports);
-            if (rc == 0) {
-                return;
-            }
-            if (rc < 0 && !erase_single_line(stream, begin)) {
-                return;
-            }
-            continue;
-        }
-
-        if (kind == Kind::Cmt) {
-            const int rc = erase_length_urc(stream, begin, "+CMT:", false, nullptr);
-            if (rc == 0) {
-                return;
-            }
-            if (rc < 0 && !erase_single_line(stream, begin)) {
-                return;
-            }
-            continue;
-        }
-
-        if (!erase_single_line(stream, begin)) {
-            return;
-        }
-    }
-}
-
-/**
- * @brief Demuxes the URCs into the status report queue.
- * @param buffer The buffer to demux.
- */
-void GsmModem::demux_into_queue(ResponseBuffer& buffer)
-{
-    std::vector<Message> reports;
-    demux_urcs(buffer.data, reports);
-    for (Message& report : reports) {
-        status_reports_.push_back(std::move(report));
-    }
-}
-
-/**
  * @brief Polls the response from the modem.
  * @param buffer The buffer to poll.
  * @return The modem response.
@@ -694,67 +476,6 @@ std::error_code GsmModem::wait_until_ok(ResponseBuffer& buffer,
 {
     std::lock_guard lock(mutex_);
     return wait_until_ok_unlocked(buffer, timeout, poll_interval);
-}
-
-/**
- * @brief Polls the status report from the modem.
- * @param out The output status report.
- * @param timeout The timeout duration.
- * @return The error code.
- */
-std::error_code GsmModem::poll_status_report(Message& out,
-                                             std::chrono::milliseconds timeout)
-{
-    std::lock_guard lock(mutex_);
-
-    if (!port_->is_open()) {
-        return make_error_code(Errc::NotOpen);
-    }
-
-    auto try_pop = [&]() -> bool {
-        if (status_reports_.empty()) {
-            return false;
-        }
-        out = std::move(status_reports_.front());
-        status_reports_.pop_front();
-        return true;
-    };
-
-    if (try_pop()) {
-        return {};
-    }
-
-    ResponseBuffer drain;
-    (void)poll_response_unlocked(drain);
-    if (try_pop()) {
-        return {};
-    }
-
-    if (timeout.count() <= 0) {
-        return make_error_code(Errc::Timeout);
-    }
-
-    const auto deadline = std::chrono::steady_clock::now() + timeout;
-    while (std::chrono::steady_clock::now() < deadline) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
-        drain.data.clear();
-        (void)poll_response_unlocked(drain);
-        if (try_pop()) {
-            return {};
-        }
-    }
-
-    return make_error_code(Errc::Timeout);
-}
-
-/**
- * @brief Gets the number of pending status reports.
- * @return The number of pending status reports.
- */
-std::size_t GsmModem::pending_status_reports() const
-{
-    std::lock_guard lock(mutex_);
-    return status_reports_.size();
 }
 
 /**
