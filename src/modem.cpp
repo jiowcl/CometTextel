@@ -1,6 +1,6 @@
 /**
  * @file modem.cpp
- * @brief GSM modem AT-command I/O (URC demux in modem/modem_urc.cpp).
+ * @brief GSM modem high-level AT commands (I/O in modem/modem_at_io.cpp, URC in modem_urc.cpp).
  *
  * @author Ji-Feng Tsai (Jiowcl)
  * @email jiowcl@gmail.com
@@ -10,42 +10,15 @@
 #include "comettextel/modem.hpp"
 #include "comettextel/pdu.hpp"
 
-#include <cctype>
 #include <cstdio>
 #include <cstring>
-#include <thread>
+#include <string>
+#include <vector>
 
 namespace comettextel {
-namespace {
 
 /**
- * @brief Checks if a string ends with a given suffix.
- * @param text The string to check.
- * @param suffix The suffix to check for.
- * @return true if the string ends with the suffix; false otherwise.
- */
-[[nodiscard]] bool ends_with(std::string_view text, std::string_view suffix)
-{
-    return text.size() >= suffix.size() &&
-           text.compare(text.size() - suffix.size(), suffix.size(), suffix) == 0;
-}
-
-/**
- * @brief Checks if a string contains a given token.
- * @param text The string to check.
- * @param token The token to check for.
- * @return true if the string contains the token; false otherwise.
- */
-[[nodiscard]] bool contains_token(std::string_view text, std::string_view token)
-{
-    return text.find(token) != std::string_view::npos;
-}
-
-} // namespace
-
-/**
- * @brief Constructs a new GsmModem object.
- * @details Constructs a new GsmModem object with an owned serial port.
+ * @brief Constructs a new GsmModem object with an owned serial port.
  */
 GsmModem::GsmModem()
     : port_(&owned_port_)
@@ -54,7 +27,7 @@ GsmModem::GsmModem()
 }
 
 /**
- * @brief Constructs a new GsmModem object with a given serial port.
+ * @brief Constructs a new GsmModem object with a shared serial port.
  * @param port The serial port to use.
  */
 GsmModem::GsmModem(SerialPort& port)
@@ -63,11 +36,10 @@ GsmModem::GsmModem(SerialPort& port)
 {
 }
 
-
 /**
- * @brief Opens the serial port and initializes the modem.
+ * @brief Opens and initializes the modem.
  * @param device The device to open.
- * @param config The serial port configuration.
+ * @param config The serial configuration.
  * @return The error code.
  */
 std::error_code GsmModem::open_and_init(std::string_view device, const SerialConfig& config)
@@ -133,50 +105,7 @@ std::error_code GsmModem::initialize()
 }
 
 /**
- * @brief Waits for the modem to respond with a prompt.
- * @param timeout The timeout duration.
- * @return The error code.
- */
-std::error_code GsmModem::expect_prompt(std::chrono::milliseconds timeout)
-{
-    ResponseBuffer buffer;
-    const auto deadline = std::chrono::steady_clock::now() + timeout;
-
-    while (std::chrono::steady_clock::now() < deadline) {
-        std::string chunk;
-
-        if (auto ec = read_string(128, chunk); ec) {
-            return ec;
-        }
-
-        if (!chunk.empty()) {
-            buffer.data.append(chunk);
-            demux_into_queue(buffer);
-        }
-
-        if (contains_token(buffer.data, ">") ||
-            classify_response(buffer.data) == ModemResponse::Error) {
-            break;
-        }
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(20));
-    }
-
-    demux_into_queue(buffer);
-
-    if (classify_response(buffer.data) == ModemResponse::Error) {
-        return make_error_code(Errc::ModemRejected);
-    }
-
-    if (buffer.data.find('>') == std::string::npos) {
-        return make_error_code(Errc::ModemRejected);
-    }
-
-    return {};
-}
-
-/**
- * @brief Sends a message to the modem.
+ * @brief Sends a message.
  * @param message The message to send.
  * @param bytes_written The number of bytes written.
  * @param timeout The timeout duration.
@@ -214,8 +143,8 @@ std::error_code GsmModem::send_message(const Message& message,
 }
 
 /**
- * @brief Sends an encoded PDU to the modem.
- * @param pdu_hex The PDU hex string.
+ * @brief Sends an encoded PDU.
+ * @param pdu_hex The PDU hex string to send.
  * @param bytes_written The number of bytes written.
  * @param timeout The timeout duration.
  * @return The error code.
@@ -273,8 +202,8 @@ std::error_code GsmModem::send_encoded_pdu(std::string pdu_hex,
 }
 
 /**
- * @brief Sends one AT command and waits for a final result.
- * @param command The command to send.
+ * @brief Runs an AT command.
+ * @param command The command to run.
  * @param response The response buffer.
  * @param timeout The timeout duration.
  * @return The error code.
@@ -303,7 +232,7 @@ std::error_code GsmModem::run_at_command(std::string_view command,
 }
 
 /**
- * @brief Requests the message list from the modem.
+ * @brief Requests a message list.
  * @return The error code.
  */
 std::error_code GsmModem::request_message_list()
@@ -313,7 +242,7 @@ std::error_code GsmModem::request_message_list()
 }
 
 /**
- * @brief Deletes a message from the modem.
+ * @brief Deletes a message.
  * @param index The index of the message to delete.
  * @return The error code.
  */
@@ -332,156 +261,9 @@ std::error_code GsmModem::delete_message(int index)
 }
 
 /**
- * @brief Classifies a response from the modem.
- * @param data The response data.
- * @return The modem response.
- */
-ModemResponse GsmModem::classify_response(std::string_view data)
-{
-    if (data.empty()) {
-        return ModemResponse::Wait;
-    }
-
-    if (contains_token(data, "\r\nOK\r\n") || ends_with(data, "OK\r\n") || ends_with(data, "\nOK\n") ||
-        ends_with(data, "OK\n") || ends_with(data, "OK\r")) {
-        return ModemResponse::Ok;
-    }
-
-    if (contains_token(data, "+CMS ERROR") || contains_token(data, "+CME ERROR") ||
-        contains_token(data, "\r\nERROR\r\n") || ends_with(data, "ERROR\r\n") ||
-        ends_with(data, "ERROR\n") || ends_with(data, "ERROR\r")) {
-        return ModemResponse::Error;
-    }
-
-    return ModemResponse::Wait;
-}
-
-/**
- * @brief Polls the response from the modem.
- * @param buffer The buffer to poll.
- * @return The modem response.
- */
-ModemResponse GsmModem::poll_response_unlocked(ResponseBuffer& buffer)
-{
-    std::string chunk;
-
-    if (auto ec = read_string(256, chunk); ec) {
-        demux_into_queue(buffer);
-        return classify_response(buffer.data);
-    }
-
-    if (!chunk.empty()) {
-        buffer.data.append(chunk);
-    }
-
-    demux_into_queue(buffer);
-    return classify_response(buffer.data);
-}
-
-/**
- * @brief Polls the response from the modem.
- * @param buffer The buffer to poll.
- * @return The modem response.
- */
-ModemResponse GsmModem::poll_response(ResponseBuffer& buffer)
-{
-    std::lock_guard lock(mutex_);
-    return poll_response_unlocked(buffer);
-}
-
-/**
- * @brief Waits for the response from the modem.
- * @param buffer The buffer to poll.
- * @param timeout The timeout duration.
- * @param poll_interval The poll interval.
- * @return The modem response.
- */
-ModemResponse GsmModem::wait_for_response_unlocked(ResponseBuffer& buffer,
-                                                  std::chrono::milliseconds timeout,
-                                                  std::chrono::milliseconds poll_interval)
-{
-    if (timeout.count() < 0) {
-        return ModemResponse::Wait;
-    }
-
-    if (poll_interval.count() <= 0) {
-        poll_interval = std::chrono::milliseconds(1);
-    }
-
-    demux_into_queue(buffer);
-    if (const auto existing = classify_response(buffer.data); existing != ModemResponse::Wait) {
-        return existing;
-    }
-
-    const auto deadline = std::chrono::steady_clock::now() + timeout;
-
-    while (std::chrono::steady_clock::now() < deadline) {
-        const auto status = poll_response_unlocked(buffer);
-        if (status != ModemResponse::Wait) {
-            return status;
-        }
-        std::this_thread::sleep_for(poll_interval);
-    }
-
-    return poll_response_unlocked(buffer);
-}
-
-/**
- * @brief Waits for the response from the modem.
- * @param buffer The buffer to poll.
- * @param timeout The timeout duration.
- * @param poll_interval The poll interval.
- * @return The modem response.
- */
-ModemResponse GsmModem::wait_for_response(ResponseBuffer& buffer,
-                                         std::chrono::milliseconds timeout,
-                                         std::chrono::milliseconds poll_interval)
-{
-    std::lock_guard lock(mutex_);
-    return wait_for_response_unlocked(buffer, timeout, poll_interval);
-}
-
-/**
- * @brief Waits for the response from the modem.
- * @param buffer The buffer to poll.
- * @param timeout The timeout duration.
- * @param poll_interval The poll interval.
- * @return The modem response.
- */
-std::error_code GsmModem::wait_until_ok_unlocked(ResponseBuffer& buffer,
-                                                 std::chrono::milliseconds timeout,
-                                                 std::chrono::milliseconds poll_interval)
-{
-    switch (wait_for_response_unlocked(buffer, timeout, poll_interval)) {
-    case ModemResponse::Ok:
-        return {};
-    case ModemResponse::Error:
-        return make_error_code(Errc::ModemRejected);
-    case ModemResponse::Wait:
-    default:
-        return make_error_code(Errc::Timeout);
-    }
-}
-
-/**
- * @brief Waits for the response from the modem.
- * @param buffer The buffer to poll.
- * @param timeout The timeout duration.
- * @param poll_interval The poll interval.
- * @return The error code.
- */
-std::error_code GsmModem::wait_until_ok(ResponseBuffer& buffer,
-                                        std::chrono::milliseconds timeout,
-                                        std::chrono::milliseconds poll_interval)
-{
-    std::lock_guard lock(mutex_);
-    return wait_until_ok_unlocked(buffer, timeout, poll_interval);
-}
-
-/**
- * @brief Parses the message list from the modem.
- * @param buffer The buffer to parse.
- * @return The messages.
+ * @brief Parses a message list.
+ * @param buffer The response buffer.
+ * @return The parsed messages.
  */
 std::vector<Message> GsmModem::parse_message_list(const ResponseBuffer& buffer)
 {
@@ -540,34 +322,6 @@ SerialPort& GsmModem::port() noexcept
 const SerialPort& GsmModem::port() const noexcept
 {
     return *port_;
-}
-
-/**
- * @brief Writes a string to the serial port.
- * @param text The string to write.
- * @return The error code.
- */
-std::error_code GsmModem::write_string(std::string_view text)
-{
-    return port_->write(text);
-}
-
-/**
- * @brief Reads a string from the serial port.
- * @param max_bytes The maximum number of bytes to read.
- * @param out The output string.
- * @return The error code.
- */
-std::error_code GsmModem::read_string(std::size_t max_bytes, std::string& out)
-{
-    std::vector<std::byte> raw;
-
-    if (auto ec = port_->read(max_bytes, raw); ec) {
-        return ec;
-    }
-    out.assign(reinterpret_cast<const char*>(raw.data()), raw.size());
-
-    return {};
 }
 
 } // namespace comettextel

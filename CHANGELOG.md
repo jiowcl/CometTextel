@@ -12,6 +12,8 @@
 - Split modem URC handling into `src/modem/modem_urc.cpp` with
   `modem/detail/urc.hpp` demux helpers (`GsmModem` URC queue / status-report
   polling unchanged at the public API).
+- Split serial AT I/O and response wait into `src/modem/modem_at_io.cpp`
+  (`modem/detail/at_response.hpp` for OK/ERROR classification).
 
 ## 1.7.1
 
