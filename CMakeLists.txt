@@ -37,6 +37,8 @@ set(COMETTEXTEL_PUBLIC_HEADERS
 set(COMETTEXTEL_COMMON_SOURCES
     src/types.cpp
     src/pdu.cpp
+    src/pdu/detail/utf8_text.cpp
+    src/pdu/pdu_gsm7.cpp
     src/modem.cpp
 )
 
@@ -56,6 +58,8 @@ function(comettextel_configure_lib target_name)
         PUBLIC
             $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
             $<INSTALL_INTERFACE:include>
+        PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}/src"
     )
     target_compile_features(${target_name} PUBLIC cxx_std_23)
     comettextel_apply_compiler_options(${target_name})
