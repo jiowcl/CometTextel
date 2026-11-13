@@ -38,7 +38,10 @@ set(COMETTEXTEL_COMMON_SOURCES
     src/types.cpp
     src/pdu.cpp
     src/pdu/detail/utf8_text.cpp
+    src/pdu/detail/tpdu_common.cpp
     src/pdu/pdu_gsm7.cpp
+    src/pdu/pdu_tpdu_submit.cpp
+    src/pdu/pdu_tpdu_decode.cpp
     src/modem.cpp
 )
 
