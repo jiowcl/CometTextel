@@ -18,6 +18,9 @@
   `AT+CMGL` / `AT+CMGD`, `modem/detail/cmgl.hpp` for list parsing).
 - Split modem open/initialize into `src/modem/modem_init.cpp`; add
   [doc/architecture.md](doc/architecture.md) for internal module layout.
+- Add vendor modem profiles (`ModemProfileId`, `set_modem_profile`, Auto
+  detect via `AT+CGMI`/`AT+CGMM`, Simcom/Quectel CNMI tables); see
+  [doc/modem-profiles.md](doc/modem-profiles.md).
 
 ## 1.7.1
 

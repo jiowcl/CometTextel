@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "comettextel/export.hpp"
+#include "comettextel/modem_profile.hpp"
 #include "comettextel/serial.hpp"
 #include "comettextel/types.hpp"
 
@@ -55,6 +56,33 @@ public:
      */
     [[nodiscard]] std::error_code open_and_init(std::string_view device,
                                                 const SerialConfig& config = {});
+
+    /**
+     * @brief Selects a vendor profile before @ref initialize / @ref open_and_init.
+     * @param profile @ref ModemProfileId::Generic by default; @ref ModemProfileId::Auto
+     *        runs @c AT+CGMI and @c AT+CGMM during initialize.
+     */
+    void set_modem_profile(ModemProfileId profile) noexcept;
+
+    /**
+     * @brief Profile requested by the caller (may be @ref ModemProfileId::Auto).
+     */
+    [[nodiscard]] ModemProfileId modem_profile() const noexcept;
+
+    /**
+     * @brief Profile used after the last successful @ref initialize.
+     */
+    [[nodiscard]] ModemProfileId resolved_modem_profile() const noexcept;
+
+    /**
+     * @brief @c AT+CGMI line when auto-detect ran (empty otherwise).
+     */
+    [[nodiscard]] std::string_view modem_manufacturer() const noexcept;
+
+    /**
+     * @brief @c AT+CGMM line when auto-detect ran (empty otherwise).
+     */
+    [[nodiscard]] std::string_view modem_model() const noexcept;
 
     /**
      * @brief Sends AT, disables echo, switches to PDU mode, and best-effort
@@ -204,6 +232,10 @@ private:
     bool owns_port_{false};
     mutable std::recursive_mutex mutex_{};
     std::deque<Message> status_reports_{};
+    ModemProfileId profile_id_{ModemProfileId::Generic};
+    ModemProfileId resolved_profile_id_{ModemProfileId::Generic};
+    std::string modem_manufacturer_;
+    std::string modem_model_;
 
     /**
      * @brief Writes a string to the modem.
@@ -243,6 +275,16 @@ private:
      * @brief Best-effort @c AT+CNMI configuration for delivery reports.
      */
     void configure_status_report_urc();
+
+    /**
+     * @brief Resolves the modem profile.
+     */
+    void resolve_modem_profile_unlocked();
+
+    /**
+     * @brief Runs the profile post-initialization.
+     */
+    void run_profile_post_init_unlocked();
 
     /**
      * @brief Demux URCs from @p buffer into @ref status_reports_.

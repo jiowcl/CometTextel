@@ -31,6 +31,7 @@ set(COMETTEXTEL_PUBLIC_HEADERS
     include/comettextel/serial.hpp
     include/comettextel/pdu.hpp
     include/comettextel/modem.hpp
+    include/comettextel/modem_profile.hpp
     include/comettextel/comettextel.hpp
 )
 
@@ -44,6 +45,7 @@ set(COMETTEXTEL_COMMON_SOURCES
     src/pdu/pdu_tpdu_decode.cpp
     src/modem.cpp
     src/modem/modem_init.cpp
+    src/modem/modem_profiles.cpp
     src/modem/modem_at_io.cpp
     src/modem/modem_messages.cpp
     src/modem/modem_urc.cpp

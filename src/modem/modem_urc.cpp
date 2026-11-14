@@ -9,6 +9,7 @@
 #include "comettextel/modem.hpp"
 #include "comettextel/pdu.hpp"
 
+#include "modem/detail/profile.hpp"
 #include "modem/detail/urc.hpp"
 
 #include <cctype>
@@ -239,14 +240,11 @@ void GsmModem::demux_into_queue(ResponseBuffer& buffer)
  */
 void GsmModem::configure_status_report_urc()
 {
-    static constexpr const char* kCandidates[] = {
-        "AT+CNMI=2,1,0,1,0\r",
-        "AT+CNMI=1,1,0,1,0\r",
-        "AT+CNMI=2,0,0,1,0\r",
-    };
+    const auto& profile = detail::modem::profile_for(resolved_profile_id_);
 
-    for (const char* cmd : kCandidates) {
+    for (std::size_t i = 0; i < profile.cnmi_command_count; ++i) {
         ResponseBuffer buffer;
+        const char* cmd = profile.cnmi_commands[i];
         if (write_string(cmd)) {
             continue;
         }

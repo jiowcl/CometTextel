@@ -10,6 +10,7 @@
 #include "comettextel/pdu.hpp"
 
 #include "modem/detail/cmgl.hpp"
+#include "modem/detail/profile.hpp"
 
 #include <cstdio>
 #include <cstring>
@@ -173,7 +174,8 @@ std::error_code GsmModem::send_encoded_pdu(std::string pdu_hex,
 std::error_code GsmModem::request_message_list()
 {
     std::lock_guard lock(mutex_);
-    return write_string("AT+CMGL\r");
+    const auto& profile = detail::modem::profile_for(resolved_profile_id_);
+    return write_string(profile.list_messages_command);
 }
 
 /**

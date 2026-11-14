@@ -25,7 +25,9 @@ use a private include root (`src/`) so modules can include `pdu/detail/...` and
 | `modem_at_io.cpp` | Serial read/write, OK/ERROR wait, CMGS `>` prompt |
 | `modem_urc.cpp` | URC demux, status-report queue, `poll_status_report` |
 | `modem_messages.cpp` | `AT+CMGS` / `AT+CMGL` / `AT+CMGD`, list parsing |
+| `modem_profiles.cpp` | Vendor profile table and `CGMI`/`CGMM` detection |
 | `detail/at_response.hpp` | Final-result classification |
+| `detail/profile.hpp` | Internal `ModemProfile` record |
 | `detail/urc.hpp` | URC demux API |
 | `detail/cmgl.hpp` | `+CMGL` response parsing |
 

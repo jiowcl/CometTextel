@@ -15,6 +15,7 @@
 #include <string_view>
 
 #include "comettextel/modem.hpp"
+#include "comettextel/modem_profile.hpp"
 #include "comettextel/types.hpp"
 
 #ifdef COMETTEXTEL_BUILD_C_API
@@ -25,6 +26,13 @@ namespace {
 
 int g_failures = 0;
 
+/**
+ * @brief Expects a condition to be true.
+ * @param condition The condition to expect.
+ * @param expression The expression to expect.
+ * @param file The file to expect.
+ * @param line The line to expect.
+ */
 void expect(bool condition, std::string_view expression, std::string_view file, int line)
 {
     if (!condition) {
@@ -35,24 +43,43 @@ void expect(bool condition, std::string_view expression, std::string_view file, 
 
 #define CHECK(expr) ::expect(static_cast<bool>(expr), #expr, __FILE__, __LINE__)
 
+/**
+ * @brief Status report PDU.
+ */
 constexpr char kStatusReportPdu[] =
     "00022A0C91889621436587215070418045232150704180452300";
 
+/**
+ * @brief Checks if a command is a basic AT command.
+ * @param cmd The command to check.
+ * @return True if the command is a basic AT command.
+ */
 [[nodiscard]] bool is_basic_at(std::string_view cmd)
 {
     return cmd == "AT\r" || cmd == "ATE0\r" || cmd == "AT+CMGF=0\r";
 }
 
+/**
+ * @brief OK response.
+ * @return The OK response.
+ */
 [[nodiscard]] std::string ok_response()
 {
     return "\r\nOK\r\n";
 }
 
+/**
+ * @brief ERROR response.
+ * @return The ERROR response.
+ */
 [[nodiscard]] std::string error_response()
 {
     return "\r\nERROR\r\n";
 }
 
+/**
+ * @brief Tests if the modem initializes successfully when CNMI is rejected.
+ */
 void test_initialize_succeeds_when_cnmi_rejected()
 {
     comettextel::SerialPort port;
@@ -71,6 +98,9 @@ void test_initialize_succeeds_when_cnmi_rejected()
     CHECK(modem.port().is_open());
 }
 
+/**
+ * @brief Tests if the modem polls a status report when there is no status report.
+ */
 void test_poll_status_report_timeout_when_empty()
 {
     comettextel::SerialPort port;
@@ -91,6 +121,9 @@ void test_poll_status_report_timeout_when_empty()
     CHECK(modem.pending_status_reports() == 0);
 }
 
+/**
+ * @brief Tests if the modem queues a status report when a CDS is interleaved with an OK.
+ */
 void test_cds_interleaved_with_ok_is_queued()
 {
     comettextel::SerialPort port;
@@ -134,6 +167,9 @@ void test_cds_interleaved_with_ok_is_queued()
     CHECK(report.peer_address == "886912345678");
 }
 
+/**
+ * @brief Tests if the modem sends a status report when a CDS is interleaved with a prompt.
+ */
 void test_cds_interleaved_with_prompt_still_sends()
 {
     comettextel::SerialPort port;
@@ -172,6 +208,9 @@ void test_cds_interleaved_with_prompt_still_sends()
     CHECK(report.message_reference == 0x2A);
 }
 
+/**
+ * @brief Tests if the modem runs an AT+CSQ command.
+ */
 void test_run_at_command_csq()
 {
     comettextel::SerialPort port;
@@ -192,6 +231,9 @@ void test_run_at_command_csq()
     CHECK(response.data.find("OK") != std::string::npos);
 }
 
+/**
+ * @brief Tests if the modem runs an AT+CSQ command and truncates the response.
+ */
 void test_run_at_command_response_truncation_contract()
 {
     // Mirrors ct_modem_run_at_command: copy min(size, cap-1) then NUL-terminate.
@@ -225,6 +267,9 @@ void test_run_at_command_response_truncation_contract()
 }
 
 #ifdef COMETTEXTEL_BUILD_C_API
+/**
+ * @brief Tests if the C API runs an AT+CSQ command and returns an error when the modem is not open.
+ */
 void test_c_api_run_at_command_not_open()
 {
     ct_modem* modem = ct_modem_create();
@@ -234,6 +279,9 @@ void test_c_api_run_at_command_not_open()
     ct_modem_destroy(modem);
 }
 
+/**
+ * @brief Tests if the C API runs an AT+CSQ command and returns an error when the arguments are invalid.
+ */
 void test_c_api_run_at_command_invalid_args()
 {
     ct_modem* modem = ct_modem_create();
@@ -249,6 +297,97 @@ void test_c_api_run_at_command_invalid_args()
 }
 #endif
 
+/**
+ * @brief Tests if the Quectel profile sends the preferred CNMI first.
+ */
+void test_quectel_profile_sends_preferred_cnmi_first()
+{
+    std::string first_cnmi;
+
+    comettextel::SerialPort port;
+    CHECK(!port.open_memory([&](std::string_view cmd) -> std::string {
+        if (is_basic_at(cmd)) {
+            return ok_response();
+        }
+        if (cmd.rfind("AT+CNMI=", 0) == 0) {
+            if (first_cnmi.empty()) {
+                first_cnmi.assign(cmd);
+            }
+            return ok_response();
+        }
+        return ok_response();
+    }));
+
+    comettextel::GsmModem modem(port);
+    modem.set_modem_profile(comettextel::ModemProfileId::Quectel);
+    CHECK(!modem.initialize());
+    CHECK(modem.resolved_modem_profile() == comettextel::ModemProfileId::Quectel);
+    CHECK(first_cnmi == "AT+CNMI=2,1,0,2,1\r");
+}
+
+/**
+ * @brief Tests if the auto detect resolves the Quectel profile.
+ */
+void test_auto_detect_resolves_quectel()
+{
+    std::string first_cnmi;
+
+    comettextel::SerialPort port;
+    CHECK(!port.open_memory([&](std::string_view cmd) -> std::string {
+        if (is_basic_at(cmd)) {
+            return ok_response();
+        }
+        if (cmd == "AT+CGMI\r") {
+            return "\r\nQuectel\r\n" + ok_response();
+        }
+        if (cmd == "AT+CGMM\r") {
+            return "\r\nEC200U\r\n" + ok_response();
+        }
+        if (cmd.rfind("AT+CNMI=", 0) == 0) {
+            if (first_cnmi.empty()) {
+                first_cnmi.assign(cmd);
+            }
+            return ok_response();
+        }
+        return ok_response();
+    }));
+
+    comettextel::GsmModem modem(port);
+    modem.set_modem_profile(comettextel::ModemProfileId::Auto);
+    CHECK(!modem.initialize());
+    CHECK(modem.resolved_modem_profile() == comettextel::ModemProfileId::Quectel);
+    CHECK(modem.modem_manufacturer() == "Quectel");
+    CHECK(modem.modem_model() == "EC200U");
+    CHECK(first_cnmi == "AT+CNMI=2,1,0,2,1\r");
+}
+
+/**
+ * @brief Tests if the generic profile skips identity queries.
+ */
+void test_generic_profile_skips_identity_queries()
+{
+    bool saw_cgmi = false;
+
+    comettextel::SerialPort port;
+    CHECK(!port.open_memory([&](std::string_view cmd) -> std::string {
+        if (cmd == "AT+CGMI\r" || cmd == "AT+CGMM\r") {
+            saw_cgmi = true;
+        }
+        if (is_basic_at(cmd) || cmd.rfind("AT+CNMI=", 0) == 0) {
+            return ok_response();
+        }
+        return ok_response();
+    }));
+
+    comettextel::GsmModem modem(port);
+    CHECK(!modem.initialize());
+    CHECK(!saw_cgmi);
+    CHECK(modem.resolved_modem_profile() == comettextel::ModemProfileId::Generic);
+}
+
+/**
+ * @brief Tests if the modem pushes a RX URC without a command.
+ */
 void test_push_rx_urc_without_command()
 {
     comettextel::SerialPort port;
@@ -272,6 +411,10 @@ void test_push_rx_urc_without_command()
 
 } // namespace
 
+/**
+ * @brief Main function.
+ * @return 0 if the tests pass, 1 if the tests fail.
+ */
 int main()
 {
     test_initialize_succeeds_when_cnmi_rejected();
@@ -284,6 +427,9 @@ int main()
     test_c_api_run_at_command_not_open();
     test_c_api_run_at_command_invalid_args();
 #endif
+    test_quectel_profile_sends_preferred_cnmi_first();
+    test_auto_detect_resolves_quectel();
+    test_generic_profile_skips_identity_queries();
     test_push_rx_urc_without_command();
 
     if (g_failures != 0) {

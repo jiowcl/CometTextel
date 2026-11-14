@@ -195,7 +195,7 @@ This project collaborate with companies that offer commercial versions, hosted s
 ## TODO  
 
 - Modem async I/O / overlapped serial (beyond URC demux + poll queue)  
-- Vendor modem profiles (`CNMI`, inbox quirks)  
+- More vendor modem profiles (inbox / `CPMS` quirks); see [doc/modem-profiles.md](doc/modem-profiles.md)  
 - Concat / incomplete-segment edge cases  
 
 ## Donation  
