@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.7.3 (Pre)
+
+- Profile Simcom / Quectel run best-effort `AT+CPMS` during
+  `initialize` and list with `AT+CMGL=4` (stat all); Generic keeps bare
+  `AT+CMGL` and skips CPMS.
+
 ## 1.7.2
 
 - Add a Windows amd64 Go sample (`sdk/go`) that runtime-loads `comettextel.dll`

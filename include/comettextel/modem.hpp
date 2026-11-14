@@ -287,6 +287,11 @@ private:
     void run_profile_post_init_unlocked();
 
     /**
+     * @brief Configures the message storage.
+     */
+    void configure_message_storage_unlocked();
+
+    /**
      * @brief Demux URCs from @p buffer into @ref status_reports_.
      * @param buffer Command-response accumulator.
      */

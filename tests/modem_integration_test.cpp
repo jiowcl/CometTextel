@@ -13,6 +13,7 @@
 #include <iostream>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "comettextel/modem.hpp"
 #include "comettextel/modem_profile.hpp"
@@ -390,14 +391,59 @@ void test_auto_detect_resolves_quectel()
 /**
  * @brief Tests if the generic profile skips identity queries.
  */
+void test_simcom_profile_configures_cpms_and_cmgl4()
+{
+    std::vector<std::string> cpms_cmds;
+    std::string list_cmd;
+
+    comettextel::SerialPort port;
+    CHECK(!port.open_memory([&](std::string_view cmd) -> std::string {
+        if (is_basic_at(cmd)) {
+            return ok_response();
+        }
+        if (cmd.rfind("AT+CPMS=", 0) == 0) {
+            cpms_cmds.emplace_back(cmd);
+            return ok_response();
+        }
+        if (cmd.rfind("AT+CNMI=", 0) == 0) {
+            return ok_response();
+        }
+        if (cmd.rfind("AT+CMGL", 0) == 0) {
+            list_cmd.assign(cmd);
+            return ok_response();
+        }
+        return ok_response();
+    }));
+
+    comettextel::GsmModem modem(port);
+    modem.set_modem_profile(comettextel::ModemProfileId::Simcom);
+    CHECK(!modem.initialize());
+    CHECK(cpms_cmds.size() >= 1);
+    CHECK(cpms_cmds[0] == "AT+CPMS=\"SM\",\"SM\",\"SM\"\r");
+
+    CHECK(!modem.request_message_list());
+    CHECK(list_cmd == "AT+CMGL=4\r");
+}
+
+/**
+ * @brief Tests if the generic profile skips identity queries.
+ */
 void test_generic_profile_skips_identity_queries()
 {
     bool saw_cgmi = false;
+    bool saw_cpms = false;
+    std::string list_cmd;
 
     comettextel::SerialPort port;
     CHECK(!port.open_memory([&](std::string_view cmd) -> std::string {
         if (cmd == "AT+CGMI\r" || cmd == "AT+CGMM\r") {
             saw_cgmi = true;
+        }
+        if (cmd.rfind("AT+CPMS=", 0) == 0) {
+            saw_cpms = true;
+        }
+        if (cmd.rfind("AT+CMGL", 0) == 0) {
+            list_cmd.assign(cmd);
         }
         if (is_basic_at(cmd) || cmd.rfind("AT+CNMI=", 0) == 0) {
             return ok_response();
@@ -408,7 +454,10 @@ void test_generic_profile_skips_identity_queries()
     comettextel::GsmModem modem(port);
     CHECK(!modem.initialize());
     CHECK(!saw_cgmi);
+    CHECK(!saw_cpms);
     CHECK(modem.resolved_modem_profile() == comettextel::ModemProfileId::Generic);
+    CHECK(!modem.request_message_list());
+    CHECK(list_cmd == "AT+CMGL\r");
 }
 
 /**
@@ -456,6 +505,7 @@ int main()
 #endif
     test_quectel_profile_sends_preferred_cnmi_first();
     test_auto_detect_resolves_quectel();
+    test_simcom_profile_configures_cpms_and_cmgl4();
     test_generic_profile_skips_identity_queries();
     test_push_rx_urc_without_command();
 

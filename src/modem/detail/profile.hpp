@@ -21,6 +21,8 @@ struct ModemProfile {
     const char* const* cnmi_commands;
     std::size_t cnmi_command_count;
     const char* list_messages_command;
+    const char* const* cpms_commands;
+    std::size_t cpms_command_count;
     const char* const* post_init_commands;
     std::size_t post_init_command_count;
     const char* const* manufacturer_match;

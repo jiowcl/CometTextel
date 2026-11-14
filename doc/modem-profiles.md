@@ -4,14 +4,15 @@ Vendor profiles centralize optional AT-command sequences that differ by module f
 
 ## Profiles
 
-| ID | When to use | CNMI / notes |
-|----|-------------|--------------|
-| `Generic` (default) | Unknown or standard 27.005 modems | Same as pre-1.7.2: `2,1,0,1,0` then fallbacks |
-| `Simcom` | SIMCom (e.g. SIM800); auto-match on `CGMI` / model prefix `SIM8` | Same CNMI as Generic today |
-| `Quectel` | Quectel EC/BG/M95…; auto-match on manufacturer or `EC*` models | Tries `2,1,0,2,1` first, then Generic fallbacks |
-| `Auto` | Let library query `AT+CGMI` + `AT+CGMM` during `initialize` | Picks Simcom / Quectel / Generic |
+| ID | When to use | CNMI / storage / list |
+|----|-------------|------------------------|
+| `Generic` (default) | Unknown or standard 27.005 modems | CNMI fallbacks; no `CPMS`; `AT+CMGL` |
+| `Simcom` | SIMCom (e.g. SIM800); auto-match on `CGMI` / `SIM8`… | Same CNMI as Generic; `CPMS` SM then ME; `AT+CMGL=4` |
+| `Quectel` | Quectel EC/BG/M95… | Quectel CNMI; `CPMS` ME/SM/MT; `AT+CMGL=4` |
+| `Auto` | Query `AT+CGMI` + `AT+CGMM` on init | Picks Simcom / Quectel / Generic |
 
-List messages uses `AT+CMGL` for all built-in profiles today.
+`AT+CPMS` runs during `initialize` (first OK wins). Listing uses the profile's
+`AT+CMGL` / `AT+CMGL=4` command via `request_message_list()`.
 
 ## Usage (C++)
 

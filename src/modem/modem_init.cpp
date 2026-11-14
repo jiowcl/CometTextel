@@ -130,6 +130,27 @@ void GsmModem::run_profile_post_init_unlocked()
 }
 
 /**
+ * @brief Configures the message storage.
+ */
+void GsmModem::configure_message_storage_unlocked()
+{
+    const auto& profile = detail::modem::profile_for(resolved_profile_id_);
+
+    for (std::size_t i = 0; i < profile.cpms_command_count; ++i) {
+        ResponseBuffer buffer;
+        const char* cmd = profile.cpms_commands[i];
+        if (write_string(cmd)) {
+            continue;
+        }
+        buffer.data.clear();
+        if (!wait_until_ok_unlocked(buffer, std::chrono::seconds(3),
+                                     std::chrono::milliseconds(50))) {
+            return;
+        }
+    }
+}
+
+/**
  * @brief Opens and initializes the modem.
  * @param device The device to open.
  * @param config The serial configuration.
@@ -195,6 +216,7 @@ std::error_code GsmModem::initialize()
 
     resolve_modem_profile_unlocked();
     run_profile_post_init_unlocked();
+    configure_message_storage_unlocked();
     configure_status_report_urc();
     return {};
 }

@@ -54,6 +54,23 @@ constexpr const char* kQuectelMfg[] = {"QUECTEL"};
 constexpr const char* kQuectelModel[] = {"EC", "BC", "BG", "M26", "M95", "UC"};
 
 /**
+ * @brief Simcom CPMS sequence.
+ */
+constexpr const char* kSimcomCpms[] = {
+    "AT+CPMS=\"SM\",\"SM\",\"SM\"\r",
+    "AT+CPMS=\"ME\",\"ME\",\"ME\"\r",
+};
+
+/**
+ * @brief Quectel CPMS sequence.
+ */
+constexpr const char* kQuectelCpms[] = {
+    "AT+CPMS=\"ME\",\"ME\",\"ME\"\r",
+    "AT+CPMS=\"SM\",\"SM\",\"SM\"\r",
+    "AT+CPMS=\"MT\",\"MT\",\"MT\"\r",
+};
+
+/**
  * @brief Profiles table.
  */
 const ModemProfile kProfiles[] = {
@@ -75,7 +92,9 @@ const ModemProfile kProfiles[] = {
         "simcom",
         kGenericCnmi,
         sizeof(kGenericCnmi) / sizeof(kGenericCnmi[0]),
-        "AT+CMGL\r",
+        "AT+CMGL=4\r",
+        kSimcomCpms,
+        sizeof(kSimcomCpms) / sizeof(kSimcomCpms[0]),
         nullptr,
         0,
         kSimcomMfg,
@@ -88,7 +107,9 @@ const ModemProfile kProfiles[] = {
         "quectel",
         kQuectelCnmi,
         sizeof(kQuectelCnmi) / sizeof(kQuectelCnmi[0]),
-        "AT+CMGL\r",
+        "AT+CMGL=4\r",
+        kQuectelCpms,
+        sizeof(kQuectelCpms) / sizeof(kQuectelCpms[0]),
         nullptr,
         0,
         kQuectelMfg,
