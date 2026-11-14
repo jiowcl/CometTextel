@@ -205,7 +205,15 @@ With `COMETTEXTEL_BUILD_C_API=ON` as well:
 comettextel_c_api_example pdu 886912345678 "Hello" 886932000000
 ```
 
-## 8. C SDK consumers  
+## 8. Modem vendor profiles (1.7.2+)
+
+C++: `GsmModem::set_modem_profile(ModemProfileId::Auto)` before `open_and_init`.
+C ABI v4 (`ct_modem_set_profile` before `ct_modem_open`). Python / .NET / Go expose
+the same ids. Release **1.7.2** native libraries report `ct_api_version() == 4`.
+Pair the DLL with headers from the same package version. Details:
+[modem-profiles.md](modem-profiles.md).
+
+## 9. C SDK consumers  
 
 Prefer the dedicated **C SDK** artifact (or Release `*-c-sdk-*` archive). It ships only:
 

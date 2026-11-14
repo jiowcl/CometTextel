@@ -160,6 +160,8 @@ hex_pdu = encode_submit(
 The same keyword arguments are available on `encode_submit_segments()` and
 `GsmModem.send()`. After requesting a report, call
 `modem.poll_status_report()` (C ABI v3) to drain `+CDS` URCs.
+`modem.set_modem_profile(MODEM_PROFILE_AUTO)` before `open()` (C ABI v4, library 1.7.2+).
+
 `modem.run_at_command("AT+CSQ\\r")` (C ABI v3) runs generic AT queries with
 URC demux during the wait. Older native
 libraries raise `Status.UNSUPPORTED` for that method while other APIs remain usable.

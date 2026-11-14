@@ -75,6 +75,7 @@ modem.exe delete COM3 1
 - `ctMessage` uses `[N]byte` fields sized like `char[N]`.
 - `DecodeStatusReport` needs C ABI version 2. `APIVersion` reports version 1 when `ct_api_version` is absent, and that call returns `ErrUnsupported`.
 - `PollStatusReport` and `RunAtCommand` need C ABI version 3. `RunAtCommand` copies at most 4095 bytes and a trailing NUL; truncation does not change the status code.
+- `SetProfile`, `ResolvedProfile`, and `Identity` need C ABI version 4 (CometTextel 1.7.2+ DLL).
 - `EncodeSubmit` is single-segment. `EncodeSubmitSegments` auto-splits with concat UDH.
 - `DCSGSM7` uses GSM 03.38 (UTF-8 in/out). Characters outside that alphabet need `DCSUCS2`.
 - `EncodeSubmit` / `Send` omit TP-VP. `EncodeSubmitEx` / `SendEx` take a relative TP-VP of 0..255 (`0` = 5 minutes) and a non-zero flag for TP-SRR.

@@ -43,6 +43,12 @@ Const CT_DCS_UCS2 As Long = 8
 Const CT_API_VERSION_LEGACY As Long = 1
 Const CT_API_VERSION_STATUS_REPORT As Long = 2
 Const CT_API_VERSION_MODEM_STATUS_REPORT As Long = 3
+Const CT_API_VERSION_MODEM_PROFILE As Long = 4
+
+Const CT_MODEM_PROFILE_GENERIC As Long = 0
+Const CT_MODEM_PROFILE_SIMCOM As Long = 1
+Const CT_MODEM_PROFILE_QUECTEL As Long = 2
+Const CT_MODEM_PROFILE_AUTO As Long = 3
 
 /' Layout must match struct ct_message in c_api.h (MSVC x64 C alignment).
    Use UByte arrays — ZString * N is NOT the same size as char[N]. '/
@@ -120,6 +126,25 @@ Type CtModemRunAtCommandFn As Function CDecl ( _
 	ByVal outResponseCap As Long, _
 	ByVal timeoutMs As Long _
 	) As Long
+Type CtModemSetProfileFn As Function CDecl ( _
+	ByVal modem As Any Ptr, _
+	ByVal profile As Long _
+	) As Long
+Type CtModemGetProfileFn As Function CDecl ( _
+	ByVal modem As Any Ptr, _
+	ByVal outProfile As Long Ptr _
+	) As Long
+Type CtModemGetResolvedProfileFn As Function CDecl ( _
+	ByVal modem As Any Ptr, _
+	ByVal outProfile As Long Ptr _
+	) As Long
+Type CtModemGetIdentityFn As Function CDecl ( _
+	ByVal modem As Any Ptr, _
+	ByVal manufacturer As Any Ptr, _
+	ByVal manufacturerCap As Long, _
+	ByVal model As Any Ptr, _
+	ByVal modelCap As Long _
+	) As Long
 Type CtPduEncodeSubmitFn As Function CDecl ( _
 	ByVal smsc As ZString Ptr, _
 	ByVal destination As ZString Ptr, _
@@ -182,6 +207,10 @@ Dim Shared ct_modem_list As CtModemListFn = 0
 Dim Shared ct_modem_delete As CtModemDeleteFn = 0
 Dim Shared ct_modem_poll_status_report As CtModemPollStatusReportFn = 0
 Dim Shared ct_modem_run_at_command As CtModemRunAtCommandFn = 0
+Dim Shared ct_modem_set_profile As CtModemSetProfileFn = 0
+Dim Shared ct_modem_get_profile As CtModemGetProfileFn = 0
+Dim Shared ct_modem_get_resolved_profile As CtModemGetResolvedProfileFn = 0
+Dim Shared ct_modem_get_identity As CtModemGetIdentityFn = 0
 Dim Shared ct_pdu_encode_submit As CtPduEncodeSubmitFn = 0
 Dim Shared ct_pdu_encode_submit_ex As CtPduEncodeSubmitExFn = 0
 Dim Shared ct_pdu_encode_submit_segments As CtPduEncodeSubmitSegmentsFn = 0
@@ -374,6 +403,12 @@ Function CtInit(ByRef dllPath As String = "comettextel.dll") As Long
 	ct_modem_poll_status_report = Cast(CtModemPollStatusReportFn, DyLibSymbol(CtLib, "ct_modem_poll_status_report"))
 	ct_modem_run_at_command = Cast(CtModemRunAtCommandFn, DyLibSymbol(CtLib, "ct_modem_run_at_command"))
 
+	' Added in C ABI version 4.
+	ct_modem_set_profile = Cast(CtModemSetProfileFn, DyLibSymbol(CtLib, "ct_modem_set_profile"))
+	ct_modem_get_profile = Cast(CtModemGetProfileFn, DyLibSymbol(CtLib, "ct_modem_get_profile"))
+	ct_modem_get_resolved_profile = Cast(CtModemGetResolvedProfileFn, DyLibSymbol(CtLib, "ct_modem_get_resolved_profile"))
+	ct_modem_get_identity = Cast(CtModemGetIdentityFn, DyLibSymbol(CtLib, "ct_modem_get_identity"))
+
 	ct_pdu_encode_submit = Cast(CtPduEncodeSubmitFn, CtBindExport("ct_pdu_encode_submit"))
 
 	If ct_pdu_encode_submit = 0 Then
@@ -427,6 +462,10 @@ Sub CtShutdown()
 	ct_modem_delete = 0
 	ct_modem_poll_status_report = 0
 	ct_modem_run_at_command = 0
+	ct_modem_set_profile = 0
+	ct_modem_get_profile = 0
+	ct_modem_get_resolved_profile = 0
+	ct_modem_get_identity = 0
 	ct_pdu_encode_submit = 0
 	ct_pdu_encode_submit_ex = 0
 	ct_pdu_encode_submit_segments = 0
@@ -789,6 +828,73 @@ Function CtModemRunAtCommand( _
 	End If
 
 	Return ct_modem_run_at_command(modem, command, outResponse, outResponseCap, timeoutMs)
+End Function
+
+' <summary>
+' CtModemSetProfile
+' </summary>
+' <param name="modem">Any Ptr</param>
+' <param name="profile">Long</param>
+' <returns>Returns Long.</returns>
+Function CtModemSetProfile(ByVal modem As Any Ptr, ByVal profile As Long) As Long
+	If CtLib = 0 OrElse modem = 0 Then Return CT_ERR_NOT_OPEN
+	If CtApiVersion < CT_API_VERSION_MODEM_PROFILE OrElse ct_modem_set_profile = 0 Then
+		Return CT_ERR_UNSUPPORTED
+	End If
+	Return ct_modem_set_profile(modem, profile)
+End Function
+
+' <summary>
+' CtModemGetProfile
+' </summary>
+' <param name="modem">Any Ptr</param>
+' <param name="outProfile">Long Ptr</param>
+' <returns>Returns Long.</returns>
+Function CtModemGetProfile(ByVal modem As Any Ptr, ByVal outProfile As Long Ptr) As Long
+	If CtLib = 0 OrElse modem = 0 OrElse outProfile = 0 Then Return CT_ERR_INVALID_ARGUMENT
+	If CtApiVersion < CT_API_VERSION_MODEM_PROFILE OrElse ct_modem_get_profile = 0 Then
+		Return CT_ERR_UNSUPPORTED
+	End If
+	Return ct_modem_get_profile(modem, outProfile)
+End Function
+
+' <summary>
+' CtModemGetResolvedProfile
+' </summary>
+' <param name="modem">Any Ptr</param>
+' <param name="outProfile">Long Ptr</param>
+' <returns>Returns Long.</returns>
+Function CtModemGetResolvedProfile(ByVal modem As Any Ptr, ByVal outProfile As Long Ptr) As Long
+	If CtLib = 0 OrElse modem = 0 OrElse outProfile = 0 Then Return CT_ERR_INVALID_ARGUMENT
+	If CtApiVersion < CT_API_VERSION_MODEM_PROFILE OrElse ct_modem_get_resolved_profile = 0 Then
+		Return CT_ERR_UNSUPPORTED
+	End If
+	Return ct_modem_get_resolved_profile(modem, outProfile)
+End Function
+
+' <summary>
+' CtModemGetIdentity
+' </summary>
+' <param name="modem">Any Ptr</param>
+' <param name="manufacturer">Any Ptr</param>
+' <param name="manufacturerCap">Long</param>
+' <param name="model">Any Ptr</param>
+' <param name="modelCap">Long</param>
+' <returns>Returns Long.</returns>
+Function CtModemGetIdentity( _
+	ByVal modem As Any Ptr, _
+	ByVal manufacturer As Any Ptr, _
+	ByVal manufacturerCap As Long, _
+	ByVal model As Any Ptr, _
+	ByVal modelCap As Long _
+	) As Long
+
+	If CtLib = 0 OrElse modem = 0 Then Return CT_ERR_NOT_OPEN
+	If manufacturer = 0 AndAlso model = 0 Then Return CT_ERR_INVALID_ARGUMENT
+	If CtApiVersion < CT_API_VERSION_MODEM_PROFILE OrElse ct_modem_get_identity = 0 Then
+		Return CT_ERR_UNSUPPORTED
+	End If
+	Return ct_modem_get_identity(modem, manufacturer, manufacturerCap, model, modelCap)
 End Function
 
 #endif /' COMETTEXTEL_BI '/

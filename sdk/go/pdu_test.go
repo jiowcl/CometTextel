@@ -23,7 +23,7 @@ func TestAPIVersion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if version < 3 {
+	if version < 4 {
 		t.Fatalf("api version %d", version)
 	}
 }

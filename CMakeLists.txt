@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.28)
 
 project(comettextel
-    VERSION 1.7.1
+    VERSION 1.7.2
     DESCRIPTION "CometTextel — cross-platform GSM SMS library (serial + PDU)"
     LANGUAGES C CXX
 )

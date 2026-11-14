@@ -92,6 +92,7 @@ modem_example.exe delete COM3 1
   as version 1 and return `CT_ERR_UNSUPPORTED` for status-report decoding.
 - `CtModemPollStatusReport` (C ABI v3) drains `+CDS` URCs into `CtStatusReport`.
 - `CtModemRunAtCommand` (C ABI v3) runs generic AT queries with URC demux.
+- `CtModemSetProfile` / `CtModemGetResolvedProfile` / `CtModemGetIdentity` (C ABI v4, CometTextel 1.7.2+ DLL).
 - `ct_pdu_encode_submit` is single-segment; `ct_pdu_encode_submit_segments` auto-splits with concat UDH.
 - `CT_DCS_GSM7` uses GSM 03.38 (UTF-8 in/out, ESC extension); alphabet outliers need `CT_DCS_UCS2`.
 - `CtEncodeSubmit*` / `CtModemSend` omit TP-VP by default. Pass `relativeValidityPeriod` 0..255

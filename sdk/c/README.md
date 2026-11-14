@@ -95,6 +95,15 @@ and writes accumulated modem text into a caller buffer (URCs are demultiplexed).
 The buffer is always NUL-terminated and truncated to `out_response_cap - 1`
 bytes when needed; truncation does not change the status code.
 
+**C ABI feature version:** call `ct_api_version()` (or check `CT_API_VERSION` in
+`c_api.h` when you compile against a matching header). CometTextel **1.7.2** ships
+`CT_API_VERSION` **4** (vendor modem profiles). Use a 1.7.2+ DLL with headers
+from the same release; older DLLs report lower versions and omit v4 exports.
+
+`ct_modem_set_profile` (v4) selects Generic, Simcom, Quectel, or Auto **before**
+`ct_modem_open`. `ct_modem_get_resolved_profile` and `ct_modem_get_identity` read
+back auto-detect results. See the repo `doc/modem-profiles.md`.
+
 ### GSM 7-bit (`CT_DCS_GSM7`)
 
 Uses the **GSM 03.38** default alphabet plus ESC extension (`[]{}\~^|€`, form feed, …).  

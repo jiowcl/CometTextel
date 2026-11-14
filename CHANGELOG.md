@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.7.2 (Pre)
+## 1.7.2
 
 - Add a Windows amd64 Go sample (`sdk/go`) that runtime-loads `comettextel.dll`
   with `syscall.LoadDLL` (no cgo): PDU self-check plus modem list / send / delete.

@@ -36,6 +36,12 @@ CompilerEndIf
 #CT_API_VERSION_LEGACY = 1
 #CT_API_VERSION_STATUS_REPORT = 2
 #CT_API_VERSION_MODEM_STATUS_REPORT = 3
+#CT_API_VERSION_MODEM_PROFILE = 4
+
+#CT_MODEM_PROFILE_GENERIC = 0
+#CT_MODEM_PROFILE_SIMCOM = 1
+#CT_MODEM_PROFILE_QUECTEL = 2
+#CT_MODEM_PROFILE_AUTO = 3
 
 ; Layout must match struct ct_message in c_api.h (C alignment).
 Structure CtMessage Align #PB_Structure_AlignC
@@ -72,6 +78,10 @@ PrototypeC.l Proto_ct_modem_list(*modem, *outMessages, maxCount.l, *outCount, ti
 PrototypeC.l Proto_ct_modem_delete(*modem, index.l, timeoutMs.l)
 PrototypeC.l Proto_ct_modem_poll_status_report(*modem, *out, timeoutMs.l)
 PrototypeC.l Proto_ct_modem_run_at_command(*modem, *command, *outResponse, outResponseCap.l, timeoutMs.l)
+PrototypeC.l Proto_ct_modem_set_profile(*modem, profile.l)
+PrototypeC.l Proto_ct_modem_get_profile(*modem, *out_profile)
+PrototypeC.l Proto_ct_modem_get_resolved_profile(*modem, *out_profile)
+PrototypeC.l Proto_ct_modem_get_identity(*modem, *manufacturer, manufacturer_cap.l, *model, model_cap.l)
 PrototypeC.l Proto_ct_pdu_encode_submit(*smsc, *destination, *text, dcs.l, *out_hex, out_hex_cap.i)
 PrototypeC.l Proto_ct_pdu_encode_submit_ex(*smsc, *destination, *text, dcs.l, relativeValidityPeriod.l, requestStatusReport.l, *out_hex, out_hex_cap.i)
 PrototypeC.l Proto_ct_pdu_encode_submit_segments(*smsc, *destination, *text, dcs.l, *out_hex, out_hex_cap.i, *out_count)
@@ -102,6 +112,10 @@ Global ct_modem_list.Proto_ct_modem_list
 Global ct_modem_delete.Proto_ct_modem_delete
 Global ct_modem_poll_status_report.Proto_ct_modem_poll_status_report
 Global ct_modem_run_at_command.Proto_ct_modem_run_at_command
+Global ct_modem_set_profile.Proto_ct_modem_set_profile
+Global ct_modem_get_profile.Proto_ct_modem_get_profile
+Global ct_modem_get_resolved_profile.Proto_ct_modem_get_resolved_profile
+Global ct_modem_get_identity.Proto_ct_modem_get_identity
 Global ct_pdu_encode_submit.Proto_ct_pdu_encode_submit
 Global ct_pdu_encode_submit_ex.Proto_ct_pdu_encode_submit_ex
 Global ct_pdu_encode_submit_segments.Proto_ct_pdu_encode_submit_segments
@@ -248,6 +262,12 @@ Procedure.i CtInit(dllPath.s = "comettextel.dll")
   ct_modem_poll_status_report = GetProcAddress(CtLib, "ct_modem_poll_status_report")
   ct_modem_run_at_command = GetProcAddress(CtLib, "ct_modem_run_at_command")
 
+  ; Added in C ABI version 4.
+  ct_modem_set_profile = GetProcAddress(CtLib, "ct_modem_set_profile")
+  ct_modem_get_profile = GetProcAddress(CtLib, "ct_modem_get_profile")
+  ct_modem_get_resolved_profile = GetProcAddress(CtLib, "ct_modem_get_resolved_profile")
+  ct_modem_get_identity = GetProcAddress(CtLib, "ct_modem_get_identity")
+
   *fn = CtBindExport("ct_pdu_encode_submit")
 
   If *fn = 0
@@ -312,6 +332,10 @@ Procedure CtShutdown()
   ct_modem_delete = 0
   ct_modem_poll_status_report = 0
   ct_modem_run_at_command = 0
+  ct_modem_set_profile = 0
+  ct_modem_get_profile = 0
+  ct_modem_get_resolved_profile = 0
+  ct_modem_get_identity = 0
   ct_pdu_encode_submit = 0
   ct_pdu_encode_submit_ex = 0
   ct_pdu_encode_submit_segments = 0
@@ -798,6 +822,76 @@ Procedure.l CtModemRunAtCommand(*modem, *command, *outResponse, outResponseCap.l
   EndIf
 
   ProcedureReturn ct_modem_run_at_command(*modem, *command, *outResponse, outResponseCap, timeoutMs)
+EndProcedure
+
+; <summary>
+; CtModemSetProfile
+; </summary>
+; <param name="*modem">Pointer</param>
+; <param name="*profile">long</param>
+; <returns>Returns long.</returns>
+Procedure.l CtModemSetProfile(*modem, profile.l)
+  If CtLib = 0 Or *modem = 0
+    ProcedureReturn #CT_ERR_NOT_OPEN
+  EndIf
+  If CtApiVersion < #CT_API_VERSION_MODEM_PROFILE Or ct_modem_set_profile = 0
+    ProcedureReturn #CT_ERR_UNSUPPORTED
+  EndIf
+  ProcedureReturn ct_modem_set_profile(*modem, profile)
+EndProcedure
+
+; <summary>
+; CtModemGetProfile
+; </summary>
+; <param name="*modem">Pointer</param>
+; <param name="*out_profile">Pointer</param>
+; <returns>Returns long.</returns>
+Procedure.l CtModemGetProfile(*modem, *out_profile)
+  If CtLib = 0 Or *modem = 0 Or *out_profile = 0
+    ProcedureReturn #CT_ERR_INVALID_ARGUMENT
+  EndIf
+  If CtApiVersion < #CT_API_VERSION_MODEM_PROFILE Or ct_modem_get_profile = 0
+    ProcedureReturn #CT_ERR_UNSUPPORTED
+  EndIf
+  ProcedureReturn ct_modem_get_profile(*modem, *out_profile)
+EndProcedure
+
+; <summary>
+; CtModemGetResolvedProfile
+; </summary>
+; <param name="*modem">Pointer</param>
+; <param name="*out_profile">Pointer</param>
+; <returns>Returns long.</returns>
+Procedure.l CtModemGetResolvedProfile(*modem, *out_profile)
+  If CtLib = 0 Or *modem = 0 Or *out_profile = 0
+    ProcedureReturn #CT_ERR_INVALID_ARGUMENT
+  EndIf
+  If CtApiVersion < #CT_API_VERSION_MODEM_PROFILE Or ct_modem_get_resolved_profile = 0
+    ProcedureReturn #CT_ERR_UNSUPPORTED
+  EndIf
+  ProcedureReturn ct_modem_get_resolved_profile(*modem, *out_profile)
+EndProcedure
+
+; <summary>
+; CtModemGetIdentity
+; </summary>
+; <param name="*modem">Pointer</param>
+; <param name="*manufacturer">Pointer</param>
+; <param name="manufacturer_cap">long</param>
+; <param name="*model">Pointer</param>
+; <param name="model_cap">long</param>
+; <returns>Returns long.</returns>
+Procedure.l CtModemGetIdentity(*modem, *manufacturer, manufacturer_cap.l, *model, model_cap.l)
+  If CtLib = 0 Or *modem = 0
+    ProcedureReturn #CT_ERR_NOT_OPEN
+  EndIf
+  If *manufacturer = 0 And *model = 0
+    ProcedureReturn #CT_ERR_INVALID_ARGUMENT
+  EndIf
+  If CtApiVersion < #CT_API_VERSION_MODEM_PROFILE Or ct_modem_get_identity = 0
+    ProcedureReturn #CT_ERR_UNSUPPORTED
+  EndIf
+  ProcedureReturn ct_modem_get_identity(*modem, *manufacturer, manufacturer_cap, *model, model_cap)
 EndProcedure
 
 ; IDE Options = PureBasic 6.41 (Windows - x64)
