@@ -267,6 +267,27 @@ def load(path: Optional[str | Path] = None) -> ctypes.CDLL:
         run_at.argtypes = [c_void_p, c_char_p, c_void_p, c_int, c_int]
         run_at.restype = c_int
 
+    # Added in C ABI version 4.
+    set_profile = getattr(loaded, "ct_modem_set_profile", None)
+    if callable(set_profile):
+        set_profile.argtypes = [c_void_p, c_int]
+        set_profile.restype = c_int
+
+    get_profile = getattr(loaded, "ct_modem_get_profile", None)
+    if callable(get_profile):
+        get_profile.argtypes = [c_void_p, POINTER(c_int)]
+        get_profile.restype = c_int
+
+    get_resolved = getattr(loaded, "ct_modem_get_resolved_profile", None)
+    if callable(get_resolved):
+        get_resolved.argtypes = [c_void_p, POINTER(c_int)]
+        get_resolved.restype = c_int
+
+    get_identity = getattr(loaded, "ct_modem_get_identity", None)
+    if callable(get_identity):
+        get_identity.argtypes = [c_void_p, c_void_p, c_int, c_void_p, c_int]
+        get_identity.restype = c_int
+
     loaded.ct_pdu_encode_submit.argtypes = [
         c_char_p,
         c_char_p,

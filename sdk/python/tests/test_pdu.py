@@ -95,6 +95,8 @@ def test_encode_submit_rejects_or_errors_on_empty_dest() -> None:
 
 
 def test_gsm7_ascii_roundtrip() -> None:
+    """Test GSM 7-bit ASCII roundtrip."""
+    
     hex_pdu = encode_submit("886912345678", "Hello GSM7", "886932000000", DCS_GSM7)
     msg = decode(hex_pdu)
     assert msg.user_data == "Hello GSM7"
@@ -102,6 +104,8 @@ def test_gsm7_ascii_roundtrip() -> None:
 
 
 def test_gsm7_escape_and_at_sign_roundtrip() -> None:
+    """Test GSM 7-bit escape and AT sign roundtrip."""
+
     text = "Cost: 10€ [ok] @home"
     hex_pdu = encode_submit("886912345678", text, "886932000000", DCS_GSM7)
     msg = decode(hex_pdu)
@@ -110,11 +114,15 @@ def test_gsm7_escape_and_at_sign_roundtrip() -> None:
 
 
 def test_gsm7_rejects_cjk() -> None:
+    """Test GSM 7-bit rejects CJK."""
+
     with pytest.raises(CometTextelError):
         encode_submit("886912345678", "你好", "886932000000", DCS_GSM7)
 
 
 def test_submit_defaults_to_no_validity_period() -> None:
+    """Test submit defaults to no validity period."""
+
     text = "Hi"
     hex_pdu = encode_submit("886912345678", text, "886932000000", DCS_GSM7)
     raw = bytes.fromhex(hex_pdu)
@@ -123,6 +131,8 @@ def test_submit_defaults_to_no_validity_period() -> None:
 
 
 def test_submit_relative_validity_and_status_report() -> None:
+    """Test submit relative validity and status report."""
+
     text = "Hi"
     hex_pdu = encode_submit(
         "886912345678",
@@ -140,6 +150,8 @@ def test_submit_relative_validity_and_status_report() -> None:
 
 
 def test_gsm7_escape_forces_concat() -> None:
+    """Test GSM 7-bit escape forces concat."""
+
     # 159×A + € => 161 septets → two segments under encode_submit_segments.
     text = ("A" * 159) + "€"
     parts = encode_submit_segments("886912345678", text, "886932000000", DCS_GSM7)
@@ -149,6 +161,8 @@ def test_gsm7_escape_forces_concat() -> None:
 
 
 def test_status_report_decode() -> None:
+    """Test status report decode."""
+
     pdu = "00022A0C91889621436587215070418045232150704180452300"
     report = decode_status_report(pdu)
     assert report.message_reference == 0x2A
@@ -159,4 +173,6 @@ def test_status_report_decode() -> None:
 
 
 def test_api_version() -> None:
-    assert api_version() >= 3
+    """Test API version."""
+
+    assert api_version() >= 4

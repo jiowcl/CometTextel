@@ -25,6 +25,13 @@ namespace {
 
 int g_failures = 0;
 
+/**
+ * @brief Expects a condition to be true.
+ * @param condition The condition to expect.
+ * @param expression The expression to expect.
+ * @param file The file to expect.
+ * @param line The line to expect.
+ */
 void expect(bool condition, std::string_view expression, std::string_view file, int line)
 {
     if (!condition) {
@@ -35,6 +42,9 @@ void expect(bool condition, std::string_view expression, std::string_view file, 
 
 #define CHECK(expr) ::expect(static_cast<bool>(expr), #expr, __FILE__, __LINE__)
 
+/**
+ * @brief Tests if the hex roundtrip works.
+ */
 void test_hex_roundtrip()
 {
     const std::uint8_t raw[] = {0xC8, 0x32, 0x9B, 0xFD, 0x0E, 0x01};
@@ -53,6 +63,9 @@ void test_hex_roundtrip()
     CHECK(static_cast<bool>(comettextel::PduCodec::hex_to_bytes("GG", bytes)));
 }
 
+/**
+ * @brief Tests if the digit roundtrip works.
+ */
 void test_digit_roundtrip()
 {
     CHECK(comettextel::PduCodec::invert_digits("8613851872468") == "683158812764F8");
@@ -62,6 +75,9 @@ void test_digit_roundtrip()
     CHECK(comettextel::PduCodec::serialize_digits(comettextel::PduCodec::invert_digits(even)) == even);
 }
 
+/**
+ * @brief Tests if the 7bit roundtrip works.
+ */
 void test_7bit_roundtrip()
 {
     const char* samples[] = {
@@ -83,6 +99,9 @@ void test_7bit_roundtrip()
     }
 }
 
+/**
+ * @brief Tests if the UCS2 roundtrip works.
+ */
 void test_ucs2_roundtrip()
 {
     const char* samples[] = {
@@ -103,6 +122,10 @@ void test_ucs2_roundtrip()
     }
 }
 
+/**
+ * @brief Tests if the message roundtrip works.
+ * @param original The original message.
+ */
 void expect_message_roundtrip(const comettextel::Message& original)
 {
     std::string pdu_hex;
@@ -120,6 +143,9 @@ void expect_message_roundtrip(const comettextel::Message& original)
     CHECK(decoded.user_data == original.user_data);
 }
 
+/**
+ * @brief Tests if the GSM 7-bit alphabet UTF-8 roundtrip works.
+ */
 void test_gsm7_alphabet_utf8_roundtrip()
 {
     const char* samples[] = {
@@ -142,6 +168,9 @@ void test_gsm7_alphabet_utf8_roundtrip()
     }
 }
 
+/**
+ * @brief Tests if the GSM 7-bit PDU escape and AT sign roundtrip works.
+ */
 void test_gsm7_pdu_escape_and_at_sign()
 {
     comettextel::Message message;
@@ -152,6 +181,9 @@ void test_gsm7_pdu_escape_and_at_sign()
     expect_message_roundtrip(message);
 }
 
+/**
+ * @brief Tests if the submit defaults to no validity period.
+ */
 void test_submit_defaults_to_no_validity_period()
 {
     comettextel::Message message;
@@ -174,6 +206,9 @@ void test_submit_defaults_to_no_validity_period()
     CHECK(!decoded.request_status_report);
 }
 
+/**
+ * @brief Tests if the submit relative validity and status report works.
+ */
 void test_submit_relative_validity_and_status_report()
 {
     comettextel::Message message;
@@ -199,6 +234,9 @@ void test_submit_relative_validity_and_status_report()
     CHECK(decoded.request_status_report);
 }
 
+/**
+ * @brief Tests if the submit concat carries options.
+ */
 void test_submit_concat_carries_options()
 {
     comettextel::Message message;
@@ -222,6 +260,9 @@ void test_submit_concat_carries_options()
     }
 }
 
+/**
+ * @brief Tests if the GSM 7-bit rejects unsupported glyph.
+ */
 void test_gsm7_rejects_unsupported_glyph()
 {
     comettextel::Message message;
@@ -236,6 +277,9 @@ void test_gsm7_rejects_unsupported_glyph()
     CHECK(pdu_hex.empty());
 }
 
+/**
+ * @brief Tests if the GSM 7-bit escape counts as two septets.
+ */
 void test_gsm7_escape_counts_as_two_septets()
 {
     // 159 plain 'A' + one euro (ESC+0x65) => 161 septets → single encode fails.
@@ -269,6 +313,9 @@ void test_gsm7_escape_counts_as_two_septets()
     CHECK(joined == text);
 }
 
+/**
+ * @brief Tests if the GSM 7-bit concat does not split escape pair.
+ */
 void test_gsm7_concat_does_not_split_escape_pair()
 {
     // Each '[' is ESC+0x3C (2 septets). 81 × '[' => 162 septets → concat;
@@ -300,6 +347,9 @@ void test_gsm7_concat_does_not_split_escape_pair()
     CHECK(joined == text);
 }
 
+/**
+ * @brief Tests if the GSM 7-bit submit roundtrip works.
+ */
 void test_pdu_submit_roundtrip_gsm7bit()
 {
     comettextel::Message message;
@@ -311,6 +361,9 @@ void test_pdu_submit_roundtrip_gsm7bit()
     expect_message_roundtrip(message);
 }
 
+/**
+ * @brief Tests if the UCS2 submit roundtrip works.
+ */
 void test_pdu_submit_roundtrip_ucs2()
 {
     comettextel::Message message;
@@ -322,6 +375,9 @@ void test_pdu_submit_roundtrip_ucs2()
     expect_message_roundtrip(message);
 }
 
+/**
+ * @brief Tests if the UCS2 submit CJK roundtrip works.
+ */
 void test_pdu_submit_roundtrip_ucs2_cjk()
 {
     comettextel::Message message;
@@ -332,6 +388,9 @@ void test_pdu_submit_roundtrip_ucs2_cjk()
     expect_message_roundtrip(message);
 }
 
+/**
+ * @brief Tests if the eightbit submit roundtrip works.
+ */
 void test_pdu_submit_roundtrip_eightbit()
 {
     comettextel::Message message;
@@ -343,6 +402,9 @@ void test_pdu_submit_roundtrip_eightbit()
     expect_message_roundtrip(message);
 }
 
+/**
+ * @brief Tests if the submit default SMSC works.
+ */
 void test_pdu_submit_default_smsc()
 {
     comettextel::Message message;
@@ -353,6 +415,9 @@ void test_pdu_submit_default_smsc()
     expect_message_roundtrip(message);
 }
 
+/**
+ * @brief Tests if the deliver path works.
+ */
 void test_pdu_deliver_path()
 {
     // Encode an SMS-SUBMIT, then reshape it into SMS-DELIVER layout and decode.
@@ -403,6 +468,9 @@ void test_pdu_deliver_path()
     CHECK(!decoded.service_timestamp.empty());
 }
 
+/**
+ * @brief Tests if the status report fixtures work.
+ */
 void test_status_report_fixtures()
 {
     // SMS-STATUS-REPORT with no optional parameters:
@@ -438,6 +506,9 @@ void test_status_report_fixtures()
     CHECK(with_optional.user_data == "OK");
 }
 
+/**
+ * @brief Tests if the status report rejects truncated fixture.
+ */
 void test_status_report_rejects_truncated_fixture()
 {
     constexpr char kTruncated[] =
@@ -447,6 +518,9 @@ void test_status_report_rejects_truncated_fixture()
           comettextel::make_error_code(comettextel::Errc::DecodeFailure));
 }
 
+/**
+ * @brief Tests if the encode rejects empty destination.
+ */
 void test_encode_rejects_empty_destination()
 {
     comettextel::Message message;
@@ -460,6 +534,9 @@ void test_encode_rejects_empty_destination()
     CHECK(pdu_hex.empty());
 }
 
+/**
+ * @brief Tests if the encode rejects overlong payload.
+ */
 void test_encode_rejects_overlong_payload()
 {
     comettextel::Message base;
@@ -504,6 +581,9 @@ void test_encode_rejects_overlong_payload()
     }
 }
 
+/**
+ * @brief Tests if the classify response works.
+ */
 void test_classify_response()
 {
     using comettextel::GsmModem;
@@ -519,6 +599,9 @@ void test_classify_response()
     CHECK(GsmModem::classify_response("partial") == ModemResponse::Wait);
 }
 
+/**
+ * @brief Tests if the decode skips UDH UCS2.
+ */
 void test_decode_skips_udh_ucs2()
 {
     // SMS-DELIVER, UDHI set, UCS-2 payload "Hi" after a 6-octet concat UDH.
@@ -539,6 +622,9 @@ void test_decode_skips_udh_ucs2()
     CHECK(message.user_data == "Hi");
 }
 
+/**
+ * @brief Tests if the decode skips UDH eightbit.
+ */
 void test_decode_skips_udh_eightbit()
 {
     constexpr std::string_view kPdu =
@@ -557,6 +643,9 @@ void test_decode_skips_udh_eightbit()
     CHECK(message.user_data == "Hi");
 }
 
+/**
+ * @brief Tests if the decode concat 16bit ref works.
+ */
 void test_decode_concat_16bit_ref()
 {
     // Same frame as UCS-2 UDH test, but IEI 0x08 / IEDL 0x04 / ref=0x1234 / total=3 / seq=2
@@ -576,6 +665,9 @@ void test_decode_concat_16bit_ref()
     CHECK(message.user_data == "Hi");
 }
 
+/**
+ * @brief Tests if the decode concat without IE works.
+ */
 void test_decode_udh_without_concat_ie()
 {
     // UDHL=03, IEI=FF (unknown), IEDL=01, data=00 — has_udh but not concatenated
@@ -594,6 +686,9 @@ void test_decode_udh_without_concat_ie()
     CHECK(message.user_data == "Hi");
 }
 
+/**
+ * @brief Tests if the encode segments matches encode when short.
+ */
 void test_encode_segments_matches_encode_when_short()
 {
     comettextel::Message message;
@@ -611,6 +706,9 @@ void test_encode_segments_matches_encode_when_short()
     CHECK(parts[0] == single);
 }
 
+/**
+ * @brief Tests if the encode segments GSM 7-bit concat works.
+ */
 void test_encode_segments_gsm7_concat()
 {
     comettextel::Message message;
@@ -639,6 +737,9 @@ void test_encode_segments_gsm7_concat()
     CHECK(joined == message.user_data);
 }
 
+/**
+ * @brief Tests if the encode segments UCS2 concat works.
+ */
 void test_encode_segments_ucs2_concat()
 {
     comettextel::Message message;
@@ -665,6 +766,9 @@ void test_encode_segments_ucs2_concat()
     CHECK(joined == message.user_data);
 }
 
+/**
+ * @brief Tests if the encode segments eightbit concat works.
+ */
 void test_encode_segments_eightbit_concat()
 {
     comettextel::Message message;
@@ -688,6 +792,9 @@ void test_encode_segments_eightbit_concat()
     CHECK(joined == message.user_data);
 }
 
+/**
+ * @brief Tests if the reassemble UCS2 complete works.
+ */
 void test_reassemble_ucs2_complete()
 {
     comettextel::Message message;
@@ -722,6 +829,9 @@ void test_reassemble_ucs2_complete()
     CHECK(joined[0].peer_address == message.peer_address);
 }
 
+/**
+ * @brief Tests if the reassemble incomplete keeps segments.
+ */
 void test_reassemble_incomplete_keeps_segments()
 {
     comettextel::Message message;
@@ -746,6 +856,9 @@ void test_reassemble_incomplete_keeps_segments()
     CHECK(out[0].user_data == only_first.user_data);
 }
 
+/**
+ * @brief Tests if the reassemble preserves singles and order works.
+ */
 void test_reassemble_preserves_singles_and_order()
 {
     comettextel::Message single;
@@ -778,6 +891,9 @@ void test_reassemble_preserves_singles_and_order()
     CHECK(out[1].user_data == long_msg.user_data);
 }
 
+/**
+ * @brief Tests if the parse message list reassembles works.
+ */
 void test_parse_message_list_reassembles()
 {
     comettextel::Message message;
@@ -803,6 +919,9 @@ void test_parse_message_list_reassembles()
     CHECK(listed[0].user_data == message.user_data);
 }
 
+/**
+ * @brief Tests if the C API PDU roundtrip works.
+ */
 void test_c_api_pdu_roundtrip()
 {
 #if defined(COMETTEXTEL_HAS_C_API)
@@ -822,16 +941,22 @@ void test_c_api_pdu_roundtrip()
 #endif
 }
 
+/**
+ * @brief Tests if the C API version works.
+ */
 void test_c_api_version()
 {
 #if defined(COMETTEXTEL_HAS_C_API)
     CHECK(ct_api_version() == CT_API_VERSION);
-    CHECK(CT_API_VERSION >= 3);
+    CHECK(CT_API_VERSION >= 4);
 #else
     CHECK(true);
 #endif
 }
 
+/**
+ * @brief Tests if the demux status report URC works.
+ */
 void test_demux_status_report_urc()
 {
     constexpr char kPdu[] =
@@ -852,6 +977,9 @@ void test_demux_status_report_urc()
           comettextel::ModemResponse::Ok);
 }
 
+/**
+ * @brief Tests if the demux strips indication and preserves prompt works.
+ */
 void test_demux_strips_indication_and_preserves_prompt()
 {
     std::string stream = "\r\n+CMTI: \"SM\",1\r\n>";
@@ -862,6 +990,9 @@ void test_demux_strips_indication_and_preserves_prompt()
     CHECK(stream.find('>') != std::string::npos);
 }
 
+/**
+ * @brief Tests if the demux leaves incomplete CDS works.
+ */
 void test_demux_leaves_incomplete_cds()
 {
     std::string stream = "\r\n+CDS: 25\r\n00022A";
@@ -871,6 +1002,9 @@ void test_demux_leaves_incomplete_cds()
     CHECK(stream.find("+CDS:") != std::string::npos);
 }
 
+/**
+ * @brief Tests if the C API submit options works.
+ */
 void test_c_api_submit_options()
 {
 #if defined(COMETTEXTEL_HAS_C_API)
@@ -887,6 +1021,9 @@ void test_c_api_submit_options()
 #endif
 }
 
+/**
+ * @brief Tests if the C API status report works.
+ */
 void test_c_api_status_report()
 {
 #if defined(COMETTEXTEL_HAS_C_API)
@@ -904,6 +1041,9 @@ void test_c_api_status_report()
 #endif
 }
 
+/**
+ * @brief Tests if the C API concat fields works.
+ */
 void test_c_api_concat_fields()
 {
 #if defined(COMETTEXTEL_HAS_C_API)
@@ -925,6 +1065,9 @@ void test_c_api_concat_fields()
 #endif
 }
 
+/**
+ * @brief Tests if the C API encode segments works.
+ */
 void test_c_api_encode_segments()
 {
 #if defined(COMETTEXTEL_HAS_C_API)
@@ -964,6 +1107,10 @@ void test_c_api_encode_segments()
 
 } // namespace
 
+/**
+ * @brief Main function.
+ * @return 0 if the tests pass, 1 if the tests fail.
+ */
 int main()
 {
     test_hex_roundtrip();

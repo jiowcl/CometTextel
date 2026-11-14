@@ -10,6 +10,7 @@
 #include "comettextel/c_api.h"
 
 #include "comettextel/modem.hpp"
+#include "comettextel/modem_profile.hpp"
 #include "comettextel/pdu.hpp"
 
 #include <chrono>
@@ -179,6 +180,52 @@ void fill_status_report(ct_status_report* out, const comettextel::Message& repor
                report.discharge_time);
 }
 
+/**
+ * @brief Map a C API modem profile to a C++ modem profile.
+ * @param profile The C API modem profile.
+ * @param out The C++ modem profile.
+ * @return True if the profile is valid, false otherwise.
+ */
+[[nodiscard]] bool map_modem_profile(const int profile, comettextel::ModemProfileId& out)
+{
+    switch (profile) {
+    case CT_MODEM_PROFILE_GENERIC:
+        out = comettextel::ModemProfileId::Generic;
+        return true;
+    case CT_MODEM_PROFILE_SIMCOM:
+        out = comettextel::ModemProfileId::Simcom;
+        return true;
+    case CT_MODEM_PROFILE_QUECTEL:
+        out = comettextel::ModemProfileId::Quectel;
+        return true;
+    case CT_MODEM_PROFILE_AUTO:
+        out = comettextel::ModemProfileId::Auto;
+        return true;
+    default:
+        return false;
+    }
+}
+
+/**
+ * @brief Map a CometTextel modem profile to a C API modem profile.
+ * @param id The CometTextel modem profile.
+ * @return The C API modem profile.
+ */
+[[nodiscard]] int modem_profile_to_ct(const comettextel::ModemProfileId id)
+{
+    switch (id) {
+    case comettextel::ModemProfileId::Generic:
+        return CT_MODEM_PROFILE_GENERIC;
+    case comettextel::ModemProfileId::Simcom:
+        return CT_MODEM_PROFILE_SIMCOM;
+    case comettextel::ModemProfileId::Quectel:
+        return CT_MODEM_PROFILE_QUECTEL;
+    case comettextel::ModemProfileId::Auto:
+        return CT_MODEM_PROFILE_AUTO;
+    }
+    return CT_MODEM_PROFILE_GENERIC;
+}
+
 } // namespace
 
 extern "C" {
@@ -245,6 +292,88 @@ ct_modem* ct_modem_create(void)
 void ct_modem_destroy(ct_modem* modem)
 {
     delete modem;
+}
+
+/**
+ * @brief Set the modem profile.
+ * @param modem The modem object.
+ * @param profile The modem profile.
+ * @return The C API status code.
+ */
+int ct_modem_set_profile(ct_modem* modem, const int profile)
+{
+    if (modem == nullptr) {
+        return CT_ERR_INVALID_ARGUMENT;
+    }
+
+    if (modem->impl.port().is_open()) {
+        return CT_ERR_INVALID_ARGUMENT;
+    }
+
+    comettextel::ModemProfileId mapped{};
+    if (!map_modem_profile(profile, mapped)) {
+        return CT_ERR_INVALID_ARGUMENT;
+    }
+
+    modem->impl.set_modem_profile(mapped);
+    return CT_OK;
+}
+
+/**
+ * @brief Get the modem profile.
+ * @param modem The modem object.
+ * @param out_profile The destination modem profile.
+ * @return The C API status code.
+ */
+int ct_modem_get_profile(ct_modem* modem, int* out_profile)
+{
+    if (modem == nullptr || out_profile == nullptr) {
+        return CT_ERR_INVALID_ARGUMENT;
+    }
+
+    *out_profile = modem_profile_to_ct(modem->impl.modem_profile());
+    return CT_OK;
+}
+
+/**
+ * @brief Get the resolved modem profile.
+ * @param modem The modem object.
+ * @param out_profile The destination resolved modem profile.
+ * @return The C API status code.
+ */
+int ct_modem_get_resolved_profile(ct_modem* modem, int* out_profile)
+{
+    if (modem == nullptr || out_profile == nullptr) {
+        return CT_ERR_INVALID_ARGUMENT;
+    }
+
+    *out_profile = modem_profile_to_ct(modem->impl.resolved_modem_profile());
+    return CT_OK;
+}
+
+/**
+ * @brief Get the modem identity.
+ * @param modem The modem object.
+ * @param manufacturer The destination manufacturer buffer.
+ * @param manufacturer_cap The destination manufacturer buffer capacity.
+ * @param model The destination model buffer.
+ * @param model_cap The destination model buffer capacity.
+ * @return The C API status code.
+ */
+int ct_modem_get_identity(ct_modem* modem,
+                          char* manufacturer,
+                          const int manufacturer_cap,
+                          char* model,
+                          const int model_cap)
+{
+    if (modem == nullptr) {
+        return CT_ERR_INVALID_ARGUMENT;
+    }
+
+    copy_field(manufacturer, static_cast<std::size_t>(manufacturer_cap > 0 ? manufacturer_cap : 0),
+               modem->impl.modem_manufacturer());
+    copy_field(model, static_cast<std::size_t>(model_cap > 0 ? model_cap : 0), modem->impl.modem_model());
+    return CT_OK;
 }
 
 /**

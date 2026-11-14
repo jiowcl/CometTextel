@@ -40,6 +40,58 @@ func (m *Modem) Close() {
 	m.handle = 0
 }
 
+// SetProfile selects a vendor profile before Open. Requires C ABI v4.
+func (m *Modem) SetProfile(profile int) error {
+	if m == nil || m.handle == 0 {
+		return &Error{Status: ErrNotOpen, Op: "ct_modem_set_profile"}
+	}
+	if api.modemSetProfile == nil {
+		return unsupported("ct_modem_set_profile")
+	}
+	status := call(api.modemSetProfile, m.handle, uintptr(int32(profile)))
+	return check(status, "ct_modem_set_profile")
+}
+
+// ResolvedProfile returns the profile applied by the last successful Open.
+func (m *Modem) ResolvedProfile() (int, error) {
+	if m == nil || m.handle == 0 {
+		return 0, &Error{Status: ErrNotOpen, Op: "ct_modem_get_resolved_profile"}
+	}
+	if api.modemGetResolved == nil {
+		return 0, unsupported("ct_modem_get_resolved_profile")
+	}
+	var value int32
+	status := call(api.modemGetResolved, m.handle, uintptr(unsafe.Pointer(&value)))
+	runtime.KeepAlive(&value)
+	if err := check(status, "ct_modem_get_resolved_profile"); err != nil {
+		return 0, err
+	}
+	return int(value), nil
+}
+
+// Identity returns manufacturer and model strings from auto-detect after Open.
+func (m *Modem) Identity() (manufacturer, model string, err error) {
+	if m == nil || m.handle == 0 {
+		return "", "", &Error{Status: ErrNotOpen, Op: "ct_modem_get_identity"}
+	}
+	if api.modemGetIdentity == nil {
+		return "", "", unsupported("ct_modem_get_identity")
+	}
+	mfg := make([]byte, 64)
+	mod := make([]byte, 64)
+	status := call(api.modemGetIdentity,
+		m.handle,
+		ptr(mfg), uintptr(len(mfg)),
+		ptr(mod), uintptr(len(mod)),
+	)
+	runtime.KeepAlive(mfg)
+	runtime.KeepAlive(mod)
+	if err := check(status, "ct_modem_get_identity"); err != nil {
+		return "", "", err
+	}
+	return cString(mfg), cString(mod), nil
+}
+
 // Open opens the serial port and initializes PDU mode.
 func (m *Modem) Open(port string, baud uint32) error {
 	if m == nil || m.handle == 0 {

@@ -13,7 +13,7 @@ Vendor profiles centralize optional AT-command sequences that differ by module f
 
 List messages uses `AT+CMGL` for all built-in profiles today.
 
-## Usage (C++)  
+## Usage (C++)
 
 ```cpp
 comettextel::GsmModem modem;
@@ -23,6 +23,18 @@ std::error_code ec = modem.open_and_init("COM3");
 ```
 
 Set the profile **before** `initialize()` / `open_and_init()`.
+
+## Usage (C ABI v4)
+
+```c
+ct_modem *m = ct_modem_create();
+ct_modem_set_profile(m, CT_MODEM_PROFILE_AUTO);
+ct_modem_open(m, "COM3", 115200);
+int resolved = 0;
+ct_modem_get_resolved_profile(m, &resolved);
+char mfg[64], model[64];
+ct_modem_get_identity(m, mfg, (int)sizeof mfg, model, (int)sizeof model);
+```
 
 ## Contributing a profile  
 

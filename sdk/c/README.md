@@ -74,7 +74,7 @@ Examples: Windows `COM3`, Linux `/dev/ttyUSB0`. The modem must speak AT commands
 | Area | Functions |
 |------|-----------|
 | Status | `ct_status_string` |
-| Modem | `ct_modem_create`, `ct_modem_destroy`, `ct_modem_open`, `ct_modem_send[_ex]`, `ct_modem_list`, `ct_modem_delete`, `ct_modem_poll_status_report`, `ct_modem_run_at_command` |
+| Modem | `ct_modem_create`, `ct_modem_destroy`, `ct_modem_open`, `ct_modem_send[_ex]`, `ct_modem_list`, `ct_modem_delete`, `ct_modem_poll_status_report`, `ct_modem_run_at_command`, `ct_modem_set_profile` (v4), `ct_modem_get_*_profile`, `ct_modem_get_identity` |
 | PDU | `ct_pdu_encode_submit[_ex]`, `ct_pdu_encode_submit_segments[_ex]`, `ct_pdu_decode`, `ct_pdu_decode_status_report` |
 
 All text fields are **UTF-8**. See `include/comettextel/c_api.h` for details.

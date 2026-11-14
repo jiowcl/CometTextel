@@ -23,6 +23,9 @@ namespace CometTextel.NET.Core.Native
         // Modem Status Report poll API version.
         internal const int ModemStatusReportApiVersion = 3;
 
+        // Modem vendor profiles API version.
+        internal const int ModemProfileApiVersion = 4;
+
         /// <summary>
         /// Returns the native C ABI feature version.
         /// </summary>
@@ -73,6 +76,50 @@ namespace CometTextel.NET.Core.Native
         /// <param name="modem">The modem to destroy.</param>
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
         public static extern void ct_modem_destroy(IntPtr modem);
+
+        /// <summary>
+        /// Sets the modem profile.
+        /// </summary>
+        /// <param name="modem">The modem to set the profile for.</param>
+        /// <param name="profile">The profile to set.</param>
+        /// <returns>The error code.</returns>
+        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int ct_modem_set_profile(IntPtr modem, int profile);
+
+        /// <summary>
+        /// Gets the modem profile.
+        /// </summary>
+        /// <param name="modem">The modem to get the profile for.</param>
+        /// <param name="outProfile">The output profile.</param>
+        /// <returns>The error code.</returns>
+        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int ct_modem_get_profile(IntPtr modem, out int outProfile);
+
+        /// <summary>
+        /// Gets the resolved modem profile.
+        /// </summary>
+        /// <param name="modem">The modem to get the resolved profile for.</param>
+        /// <param name="outProfile">The output resolved profile.</param>
+        /// <returns>The error code.</returns>
+        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int ct_modem_get_resolved_profile(IntPtr modem, out int outProfile);
+
+        /// <summary>
+        /// Gets the modem identity.
+        /// </summary>
+        /// <param name="modem">The modem to get the identity for.</param>
+        /// <param name="manufacturer">The output manufacturer.</param>
+        /// <param name="manufacturerCap">The capacity of the manufacturer buffer.</param>
+        /// <param name="model">The output model.</param>
+        /// <param name="modelCap">The capacity of the model buffer.</param>
+        /// <returns>The error code.</returns>
+        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int ct_modem_get_identity(
+            IntPtr modem,
+            byte[] manufacturer,
+            int manufacturerCap,
+            byte[] model,
+            int modelCap);
 
         /// <summary>
         /// Opens a modem.

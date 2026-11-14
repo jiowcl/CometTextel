@@ -268,6 +268,32 @@ void test_run_at_command_response_truncation_contract()
 
 #ifdef COMETTEXTEL_BUILD_C_API
 /**
+ * @brief Tests if the C API modem profile roundtrip works.
+ */
+void test_c_api_modem_profile_roundtrip()
+{
+    comettextel::SerialPort port;
+    CHECK(!port.open_memory([](std::string_view cmd) -> std::string {
+        if (is_basic_at(cmd) || cmd.rfind("AT+CNMI=", 0) == 0) {
+            return ok_response();
+        }
+        return ok_response();
+    }));
+
+    ct_modem* modem = ct_modem_create();
+    CHECK(modem != nullptr);
+
+    int requested = -1;
+    CHECK(ct_modem_set_profile(modem, CT_MODEM_PROFILE_QUECTEL) == CT_OK);
+    CHECK(ct_modem_get_profile(modem, &requested) == CT_OK);
+    CHECK(requested == CT_MODEM_PROFILE_QUECTEL);
+
+    CHECK(ct_modem_set_profile(modem, 99) == CT_ERR_INVALID_ARGUMENT);
+
+    ct_modem_destroy(modem);
+}
+
+/**
  * @brief Tests if the C API runs an AT+CSQ command and returns an error when the modem is not open.
  */
 void test_c_api_run_at_command_not_open()
@@ -424,6 +450,7 @@ int main()
     test_run_at_command_csq();
     test_run_at_command_response_truncation_contract();
 #ifdef COMETTEXTEL_BUILD_C_API
+    test_c_api_modem_profile_roundtrip();
     test_c_api_run_at_command_not_open();
     test_c_api_run_at_command_invalid_args();
 #endif

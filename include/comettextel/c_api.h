@@ -47,7 +47,7 @@ enum ct_status {
 };
 
 /** @brief Current C ABI feature version. */
-#define CT_API_VERSION 3
+#define CT_API_VERSION 4
 
 /** @brief TP-DCS values. */
 enum ct_dcs {
@@ -58,6 +58,16 @@ enum ct_dcs {
 
 /** @brief Opaque modem handle. */
 typedef struct ct_modem ct_modem;
+
+/**
+ * @brief Vendor modem profile (C ABI v4). Must match @c ModemProfileId in C++.
+ */
+enum ct_modem_profile {
+    CT_MODEM_PROFILE_GENERIC = 0,
+    CT_MODEM_PROFILE_SIMCOM = 1,
+    CT_MODEM_PROFILE_QUECTEL = 2,
+    CT_MODEM_PROFILE_AUTO = 3
+};
 
 /** @brief Decoded / listed message (UTF-8 text fields). */
 typedef struct ct_message {
@@ -118,6 +128,39 @@ CT_API ct_modem* ct_modem_create(void);
  * @param modem The modem object.
  */
 CT_API void ct_modem_destroy(ct_modem* modem);
+
+/**
+ * @brief Selects a vendor profile before @ref ct_modem_open.
+ * @param profile One of @ref ct_modem_profile.
+ * @return CT_OK, or CT_ERR_INVALID_ARGUMENT for an unknown profile or when the
+ *         port is already open.
+ * @note Requires C ABI version 4.
+ */
+CT_API int ct_modem_set_profile(ct_modem* modem, int profile);
+
+/**
+ * @brief Returns the profile set by @ref ct_modem_set_profile (or Generic).
+ * @param out_profile Receives a @ref ct_modem_profile value.
+ * @note Requires C ABI version 4.
+ */
+CT_API int ct_modem_get_profile(ct_modem* modem, int* out_profile);
+
+/**
+ * @brief Returns the profile applied by the last successful @ref ct_modem_open.
+ * @param out_profile Receives a @ref ct_modem_profile value.
+ * @note Requires C ABI version 4.
+ */
+CT_API int ct_modem_get_resolved_profile(ct_modem* modem, int* out_profile);
+
+/**
+ * @brief Copies @c AT+CGMI / @c AT+CGMM identity when Auto-detect ran.
+ * @note Requires C ABI version 4. Empty strings when not queried.
+ */
+CT_API int ct_modem_get_identity(ct_modem* modem,
+                                 char* manufacturer,
+                                 int manufacturer_cap,
+                                 char* model,
+                                 int model_cap);
 
 /**
  * @brief Opens the serial port and initializes the modem (PDU mode).

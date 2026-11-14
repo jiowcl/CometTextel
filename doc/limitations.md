@@ -10,4 +10,4 @@
 - **TP-VP / TP-SRR**: submit PDU APIs omit validity period and status-report request by default. Optional relative TP-VP (`0..255`, where `0` is 5 minutes) and TP-SRR are available through the options / C ABI `_ex` APIs.
 - **SMS-STATUS-REPORT**: `PduCodec::decode` recognizes MTI=10 and exposes TP-MR, TP-RA, TP-SCTS, TP-DT, and TP-Status through `Message`. Modem helpers demux `+CDS` URCs into a poll queue (`poll_status_report` / `ct_modem_poll_status_report`) after best-effort `AT+CNMI`.
 - **Generic AT queries**: `GsmModem::run_at_command` / `ct_modem_run_at_command` (C ABI v3) send one command and wait for OK/ERROR with URC demux during the wait.
-- **Modem profiles**: `GsmModem::set_modem_profile` selects Generic, Simcom, Quectel, or Auto (`AT+CGMI`/`AT+CGMM` on init). Auto-detect is best-effort; production apps may pin a profile. See [modem-profiles.md](modem-profiles.md).
+- **Modem profiles**: `GsmModem::set_modem_profile` / `ct_modem_set_profile` (C ABI v4) selects Generic, Simcom, Quectel, or Auto (`AT+CGMI`/`AT+CGMM` on init). Auto-detect is best-effort; production apps may pin a profile. See [modem-profiles.md](modem-profiles.md).

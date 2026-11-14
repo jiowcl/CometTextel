@@ -21,6 +21,8 @@
 - Add vendor modem profiles (`ModemProfileId`, `set_modem_profile`, Auto
   detect via `AT+CGMI`/`AT+CGMM`, Simcom/Quectel CNMI tables); see
   [doc/modem-profiles.md](doc/modem-profiles.md).
+- C ABI v4: `ct_modem_set_profile`, `ct_modem_get_*_profile`,
+  `ct_modem_get_identity`; Python / .NET / Go bindings updated.
 
 ## 1.7.1
 

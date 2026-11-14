@@ -15,6 +15,11 @@ from . import _lib
 from .errors import CometTextelError, Status
 from .pdu import DCS_UCS2, Message, StatusReport, _as_utf8, _c_z, _check, message_from_ct
 
+MODEM_PROFILE_GENERIC = 0
+MODEM_PROFILE_SIMCOM = 1
+MODEM_PROFILE_QUECTEL = 2
+MODEM_PROFILE_AUTO = 3
+
 
 class GsmModem:
     """Context-managed wrapper around an opaque ``ct_modem`` handle."""
@@ -68,6 +73,71 @@ class GsmModem:
         if self._closed or not self._handle:
             raise CometTextelError(2, "GsmModem", "modem is closed")
         return _lib.load()
+
+    def set_modem_profile(self, profile: int) -> None:
+        """Select a vendor profile before :meth:`open`. Requires C ABI v4."""
+
+        lib = self._ensure_open()
+        setter = getattr(lib, "ct_modem_set_profile", None)
+        if not callable(setter):
+            raise CometTextelError(
+                9,
+                "ct_modem_set_profile",
+                f"native C ABI version {_lib.api_version()} does not provide modem profiles",
+            )
+        status = setter(self._handle, int(profile))
+        _check(status, "ct_modem_set_profile")
+
+    def modem_profile(self) -> int:
+        """Return the profile id set on this handle (requires C ABI v4)."""
+
+        lib = self._ensure_open()
+        getter = getattr(lib, "ct_modem_get_profile", None)
+        if not callable(getter):
+            raise CometTextelError(
+                9,
+                "ct_modem_get_profile",
+                f"native C ABI version {_lib.api_version()} does not provide modem profiles",
+            )
+        value = ctypes.c_int()
+        status = getter(self._handle, ctypes.byref(value))
+        _check(status, "ct_modem_get_profile")
+        return int(value.value)
+
+    def resolved_modem_profile(self) -> int:
+        """Return the profile applied by the last successful :meth:`open`."""
+
+        lib = self._ensure_open()
+        getter = getattr(lib, "ct_modem_get_resolved_profile", None)
+        if not callable(getter):
+            raise CometTextelError(
+                9,
+                "ct_modem_get_resolved_profile",
+                f"native C ABI version {_lib.api_version()} does not provide modem profiles",
+            )
+        value = ctypes.c_int()
+        status = getter(self._handle, ctypes.byref(value))
+        _check(status, "ct_modem_get_resolved_profile")
+        return int(value.value)
+
+    def modem_identity(self) -> tuple[str, str]:
+        """Return (manufacturer, model) from auto-detect after :meth:`open`."""
+
+        lib = self._ensure_open()
+        identity = getattr(lib, "ct_modem_get_identity", None)
+        if not callable(identity):
+            raise CometTextelError(
+                9,
+                "ct_modem_get_identity",
+                f"native C ABI version {_lib.api_version()} does not provide modem profiles",
+            )
+        mfg = ctypes.create_string_buffer(64)
+        model = ctypes.create_string_buffer(64)
+        status = identity(self._handle, mfg, len(mfg), model, len(model))
+        _check(status, "ct_modem_get_identity")
+        return mfg.value.decode("utf-8", errors="replace"), model.value.decode(
+            "utf-8", errors="replace"
+        )
 
     def open(self, port: str, baud_rate: int = 115200) -> None:
         """Open the serial port and initialize PDU mode."""

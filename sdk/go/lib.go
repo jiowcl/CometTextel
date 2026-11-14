@@ -40,6 +40,11 @@ const (
 	DCS8Bit = 4
 	DCSUCS2 = 8
 
+	ModemProfileGeneric = 0
+	ModemProfileSimcom  = 1
+	ModemProfileQuectel = 2
+	ModemProfileAuto    = 3
+
 	hexCap      = 65536
 	responseCap = 4096
 	listMax     = 64
@@ -125,6 +130,10 @@ type procs struct {
 	modemDelete  *syscall.Proc
 	modemPoll    *syscall.Proc
 	modemRunAt   *syscall.Proc
+	modemSetProfile       *syscall.Proc
+	modemGetProfile       *syscall.Proc
+	modemGetResolved      *syscall.Proc
+	modemGetIdentity      *syscall.Proc
 
 	encodeSubmit       *syscall.Proc
 	encodeSubmitEx     *syscall.Proc
@@ -189,6 +198,10 @@ func load() error {
 	api.modemSendEx = findOptional(dll, "ct_modem_send_ex")
 	api.modemPoll = findOptional(dll, "ct_modem_poll_status_report")
 	api.modemRunAt = findOptional(dll, "ct_modem_run_at_command")
+	api.modemSetProfile = findOptional(dll, "ct_modem_set_profile")
+	api.modemGetProfile = findOptional(dll, "ct_modem_get_profile")
+	api.modemGetResolved = findOptional(dll, "ct_modem_get_resolved_profile")
+	api.modemGetIdentity = findOptional(dll, "ct_modem_get_identity")
 	api.encodeSubmitEx = findOptional(dll, "ct_pdu_encode_submit_ex")
 	api.encodeSegmentsEx = findOptional(dll, "ct_pdu_encode_submit_segments_ex")
 	api.decodeStatusReport = findOptional(dll, "ct_pdu_decode_status_report")

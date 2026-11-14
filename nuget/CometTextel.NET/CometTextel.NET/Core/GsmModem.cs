@@ -39,6 +39,68 @@ namespace CometTextel.NET.Core
         }
 
         /// <summary>
+        /// Selects a vendor profile before <see cref="Open"/>.
+        /// Requires native C ABI version 4.
+        /// </summary>
+        public void SetModemProfile(ModemProfile profile)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            if (Pdu.ApiVersion < NativeMethods.ModemProfileApiVersion)
+            {
+                throw new NotSupportedException(
+                    $"native C ABI version {Pdu.ApiVersion} does not provide modem profiles");
+            }
+
+            try
+            {
+                Pdu.EnsureOk(NativeMethods.ct_modem_set_profile(_handle, (int)profile));
+            }
+            catch (EntryPointNotFoundException)
+            {
+                throw new NotSupportedException(
+                    "native C ABI does not export ct_modem_set_profile");
+            }
+        }
+
+        /// <summary>
+        /// Requested profile id (C ABI v4).
+        /// </summary>
+        public ModemProfile ModemProfile
+        {
+            get
+            {
+                ObjectDisposedException.ThrowIf(_disposed, this);
+                EnsureModemProfileApi();
+                Pdu.EnsureOk(NativeMethods.ct_modem_get_profile(_handle, out int value));
+                return (ModemProfile)value;
+            }
+        }
+
+        /// <summary>
+        /// Profile applied by the last successful <see cref="Open"/>.
+        /// </summary>
+        public ModemProfile ResolvedModemProfile
+        {
+            get
+            {
+                ObjectDisposedException.ThrowIf(_disposed, this);
+                EnsureModemProfileApi();
+                Pdu.EnsureOk(NativeMethods.ct_modem_get_resolved_profile(_handle, out int value));
+                return (ModemProfile)value;
+            }
+        }
+
+        /// <summary>
+        /// Manufacturer string from auto-detect (<c>AT+CGMI</c>), or empty.
+        /// </summary>
+        public string ModemManufacturer => GetIdentityField(manufacturer: true);
+
+        /// <summary>
+        /// Model string from auto-detect (<c>AT+CGMM</c>), or empty.
+        /// </summary>
+        public string ModemModel => GetIdentityField(manufacturer: false);
+
+        /// <summary>
         /// Opens the port and initializes PDU mode.
         /// </summary>
         /// <param name="port">The port to open.</param>
@@ -222,6 +284,50 @@ namespace CometTextel.NET.Core
             Pdu.EnsureOk(status);
 
             return StatusReport.FromNative(native);
+        }
+
+        /// <summary>
+        /// Ensures the modem profile API is available.
+        /// </summary>
+        private static void EnsureModemProfileApi()
+        {
+            if (Pdu.ApiVersion < NativeMethods.ModemProfileApiVersion)
+            {
+                throw new CometTextelException(
+                    Enums.ErrUnsupported,
+                    $"native C ABI version {Pdu.ApiVersion} does not provide modem profiles");
+            }
+        }
+
+        /// <summary>
+        /// Gets the identity field.
+        /// </summary>
+        /// <param name="manufacturer">True if the field is the manufacturer.</param>
+        /// <returns>The identity field.</returns>
+        private string GetIdentityField(bool manufacturer)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            EnsureModemProfileApi();
+
+            byte[] buffer = new byte[64];
+            byte[] other = new byte[64];
+            try
+            {
+                Pdu.EnsureOk(NativeMethods.ct_modem_get_identity(
+                    _handle,
+                    manufacturer ? buffer : other,
+                    buffer.Length,
+                    manufacturer ? other : buffer,
+                    buffer.Length));
+            }
+            catch (EntryPointNotFoundException)
+            {
+                throw new CometTextelException(
+                    Enums.ErrUnsupported,
+                    "native C ABI does not export ct_modem_get_identity");
+            }
+
+            return Encoding.UTF8.GetString(buffer).TrimEnd('\0');
         }
 
         /// <inheritdoc />
