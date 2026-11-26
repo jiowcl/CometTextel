@@ -1,10 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+    <TargetFrameworks>net8.0;net9.0;net10.0;net11.0</TargetFrameworks>
     <Company>Inwazy Technology</Company>
     <Copyright>Ji-Feng Tsai</Copyright>
-    <Description>.NET 8/9/10 x64 wrapper for CometTextel (win-x64 + linux-x64 native RID assets): GSM SMS over serial via P/Invoke C ABI — send, list, delete, and PDU helpers.</Description>
+    <Description>.NET 8/9/10/11 x64 wrapper for CometTextel (win-x64 + linux-x64 native RID assets): GSM SMS over serial via P/Invoke C ABI — send, list, delete, and PDU helpers.</Description>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <PackageId>CometTextel.NET</PackageId>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>

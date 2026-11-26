@@ -16,7 +16,7 @@ Native RID assets: **`runtimes/win-x64/native/comettextel.dll`** and **`runtimes
 |------|--------|
 | OS | Windows 10+ or Linux (x64) |
 | Architecture | **x64 only** (`PlatformTarget=x64`) |
-| .NET | **net8.0 / net9.0 / net10.0** |
+| .NET | **net8.0 / net9.0 / net10.0 / net11.0** |
 | Native | Ships win-x64 DLL + linux-x64 `.so` (CometTextel C ABI) |
 | Hardware | GSM modem / USB dongle that speaks AT commands in **PDU mode** (for send/list/delete) |
 
