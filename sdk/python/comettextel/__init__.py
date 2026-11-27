@@ -42,6 +42,6 @@ __all__ = [
     "api_version",
 ]
 
-__version__ = "1.7.2"
+__version__ = "1.7.3"
 
 api_version = _lib.api_version

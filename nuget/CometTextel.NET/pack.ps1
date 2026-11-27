@@ -58,7 +58,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "==> .NET PDU smoke tests"
-dotnet test (Join-Path $NugetRoot "CometTextel.NET.Tests\CometTextel.NET.Tests.csproj") `
+dotnet test --project (Join-Path $NugetRoot "CometTextel.NET.Tests\CometTextel.NET.Tests.csproj") `
     -c $Configuration `
     -p:Platform=$Platform `
     --verbosity minimal

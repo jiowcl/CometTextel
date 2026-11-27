@@ -6,7 +6,8 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on every push and pull request 
   (`bin/comettextel.dll`, import/static libs, headers)  
 - **Windows C SDK**: upload `comettextel-c-sdk-windows-x64` (`c_api.h` + DLL/libs + `examples/c_api_example.c`)  
 - **Windows Python**: pytest + wheel artifact `comettextel-python-wheel-windows`  
-- **Windows .NET**: PDU smoke tests (`CometTextel.NET.Tests`)  
+- **Windows .NET**: `setup-dotnet` via repo `global.json` (SDK 11.0.100); PDU
+  smoke tests with `dotnet test --project` (MTP runner)  
 - **Linux (GCC 14)**: configure, build, run CTest, upload `comettextel-linux-x64`  
   (`libcomettextel.so*`, `libcomettextel.a`, headers)  
 - **Linux C SDK**: upload `comettextel-c-sdk-linux-x64`  

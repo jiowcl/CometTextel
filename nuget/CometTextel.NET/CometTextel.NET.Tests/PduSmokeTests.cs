@@ -117,7 +117,17 @@ public sealed class PduSmokeTests
     [Fact]
     public void ApiVersion_IsCurrent()
     {
-        Assert.True(Pdu.ApiVersion >= 3);
+        Assert.True(Pdu.ApiVersion >= 4);
+    }
+
+    [Fact]
+    public void SetModemProfile_BeforeOpen_RoundTrips()
+    {
+        using GsmModem modem = new();
+        modem.SetModemProfile(ModemProfile.Quectel);
+        Assert.Equal(ModemProfile.Quectel, modem.ModemProfile);
+        modem.SetModemProfile(ModemProfile.Generic);
+        Assert.Equal(ModemProfile.Generic, modem.ModemProfile);
     }
 
     [Fact]

@@ -65,6 +65,24 @@ reported as version 1 and produces a clear unsupported error for this method.
 OK/ERROR with URC demux, and returns the accumulated modem text. A trailing CR
 is appended when missing.
 
+### Modem vendor profiles (native 1.7.2+, list/CPMS behavior 1.7.3+)
+
+Call `SetModemProfile` **before** `Open`. Requires `Pdu.ApiVersion >= 4`
+(bundled native from CometTextel **1.7.2+**). Simcom/Quectel profiles apply
+`AT+CPMS` during `Open` and use `AT+CMGL=4` when listing ( **1.7.3+** native ).
+
+```csharp
+using var modem = new GsmModem();
+modem.SetModemProfile(ModemProfile.Auto);
+modem.Open("COM3", baudRate: 115200);
+Console.WriteLine(modem.ResolvedModemProfile);
+Console.WriteLine(modem.ModemManufacturer);
+Console.WriteLine(modem.ModemModel);
+```
+
+Pin `ModemProfile.Simcom` or `ModemProfile.Quectel` when auto-detect is wrong.
+`ModemProfile.Generic` matches unknown modules (bare `AT+CMGL`, no `CPMS`).
+
 ### Strings
 
 All text fields are **UTF-8** at the native boundary (`LPUTF8Str` / UTF-8 byte fields). Prefer ASCII digits for SMSC / destination addresses.
@@ -103,6 +121,7 @@ Console.WriteLine(decoded.PeerAddress + " => " + decoded.UserData);
 using CometTextel.NET.Core;
 
 using var modem = new GsmModem();
+modem.SetModemProfile(ModemProfile.Auto);
 modem.Open("COM3", baudRate: 115200);   // Linux: "/dev/ttyUSB0"
 
 modem.Send(
@@ -124,7 +143,14 @@ foreach (var message in modem.List())
 Requires `CometTextel.NET/Lib/win-x64/comettextel.dll` (same as packing):
 
 ```powershell
-dotnet test CometTextel.NET.Tests\CometTextel.NET.Tests.csproj -c Release -p:Platform=x64
+# Uses repo global.json (SDK 11.0.100) when run from comettextel/
+dotnet test --project CometTextel.NET.Tests\CometTextel.NET.Tests.csproj -c Release -p:Platform=x64
+```
+
+Pack all TFMs (net8–net11):
+
+```powershell
+dotnet build CometTextel.NET\CometTextel.NET.csproj -c Release -p:Platform=x64
 ```
 
 `pack.ps1` and CI run these before producing the NuGet package.

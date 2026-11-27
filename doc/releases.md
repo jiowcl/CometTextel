@@ -1,5 +1,9 @@
 # Releases  
 
+**1.7.3** packages CometTextel.NET **1.7.3** (net8.0–net11.0) with natives
+that include vendor profile list/CPMS behavior. Use matching library and NuGet
+versions; C ABI feature version remains **4**.
+
 Push a version tag to publish a GitHub Release with binaries:  
 
 ```bash

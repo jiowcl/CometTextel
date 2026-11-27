@@ -95,6 +95,11 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
       - name: .NET PDU smoke tests
         shell: pwsh
         run: |
@@ -102,7 +107,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path "$lib/win-x64" | Out-Null
           Copy-Item "build/Release/comettextel.dll" "$lib/win-x64/comettextel.dll" -Force
           Copy-Item "build/Release/comettextel.dll" "$lib/comettextel.dll" -Force
-          dotnet test "nuget/CometTextel.NET/CometTextel.NET.Tests/CometTextel.NET.Tests.csproj" `
+          dotnet test --project "nuget/CometTextel.NET/CometTextel.NET.Tests/CometTextel.NET.Tests.csproj" `
             -c Release -p:Platform=x64 --verbosity normal
 
       - name: Upload NuGet win-x64 native
@@ -238,6 +243,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
 
       - name: Download win-x64 native
         uses: actions/download-artifact@v4

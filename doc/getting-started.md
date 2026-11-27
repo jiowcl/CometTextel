@@ -205,11 +205,12 @@ With `COMETTEXTEL_BUILD_C_API=ON` as well:
 comettextel_c_api_example pdu 886912345678 "Hello" 886932000000
 ```
 
-## 8. Modem vendor profiles (1.7.2+)
+## 8. Modem vendor profiles (1.7.2+ API, 1.7.3+ list/CPMS)
 
 C++: `GsmModem::set_modem_profile(ModemProfileId::Auto)` before `open_and_init`.
 C ABI v4 (`ct_modem_set_profile` before `ct_modem_open`). Python / .NET / Go expose
-the same ids. Release **1.7.2** native libraries report `ct_api_version() == 4`.
+the same ids. Release **1.7.2+** natives report `ct_api_version() == 4`.
+**1.7.3+** adds Simcom/Quectel `AT+CPMS` and `AT+CMGL=4` for listing.
 Pair the DLL with headers from the same package version. Details:
 [modem-profiles.md](modem-profiles.md).
 

@@ -1,10 +1,13 @@
 # Changelog
 
-## 1.7.3 (Pre)
+## 1.7.3
 
 - Profile Simcom / Quectel run best-effort `AT+CPMS` during
   `initialize` and list with `AT+CMGL=4` (stat all); Generic keeps bare
   `AT+CMGL` and skips CPMS.
+- CometTextel.NET **1.7.3**: targets **net8.0–net11.0**; repo `global.json`
+  pins SDK 11.0.100 and MTP test runner; CI/pack use `dotnet test --project`
+  (SDK 11+); NuGet README documents modem profiles.
 
 ## 1.7.2
 
